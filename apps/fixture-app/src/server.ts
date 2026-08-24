@@ -199,6 +199,23 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
     return reply.send(settings);
   });
 
+  // Deliberately absent from the OpenAPI document: this endpoint exists only behind the form.
+  app.post<{ Params: { accountId: string } }>(
+    "/internal-ui/accounts/:accountId/registration",
+    (request, reply) => {
+      const found = account(request.params.accountId);
+      if (found === undefined) return reply.status(404).send({ error: "account_not_found" });
+
+      const parsed = z
+        .object({ registration_number: z.string().min(1).max(40) })
+        .safeParse(request.body);
+      if (!parsed.success) return reply.status(422).send({ error: "invalid_registration" });
+
+      found.registration_number = parsed.data.registration_number;
+      return reply.send({ registration_number: found.registration_number });
+    },
+  );
+
   const page = (path: string, title: string): void => {
     app.get(path, (request, reply) => {
       const seededAccount = state.accounts.get(SEED_ACCOUNT_ID);

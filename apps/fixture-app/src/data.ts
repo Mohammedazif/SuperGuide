@@ -16,6 +16,7 @@ export interface Account {
   seat_limit: number;
   billing_address: BillingAddress;
   tax_id: string | null;
+  registration_number: string | null;
 }
 
 export interface Seat {
@@ -72,6 +73,7 @@ export function seedState(): FixtureState {
       country: "GB",
     },
     tax_id: "GB123456789",
+    registration_number: null,
   });
 
   const seatRows: Seat[] = [

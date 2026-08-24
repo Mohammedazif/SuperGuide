@@ -46,6 +46,14 @@
     }
   );
 
+  bind("registration-form", "registration-status", ["registration_number"], function (accountId, payload) {
+    return fetch("/internal-ui/accounts/" + accountId + "/registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  });
+
   bind("sso-form", "sso-status", ["sso_enabled", "enforced_domain"], function (accountId, payload) {
     return fetch("/api/v1/accounts/" + accountId + "/sso", {
       method: "PUT",

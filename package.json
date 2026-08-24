@@ -54,6 +54,8 @@
     "@superguide/observer": "workspace:*",
     "@superguide/executor": "workspace:*",
     "@superguide/client-core": "workspace:*",
-    "@superguide/widget-ui": "workspace:*"
+    "@superguide/widget-ui": "workspace:*",
+    "jsdom": "^26.1.0",
+    "@types/jsdom": "^21.1.7"
   }
 }

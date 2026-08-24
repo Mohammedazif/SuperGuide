@@ -178,13 +178,35 @@ function accountSection(model: PageModel): string {
     <dt>Seat limit</dt><dd>${model.account.seat_limit}</dd>
     <dt>Tax identifier</dt><dd>${escapeHtml(model.account.tax_id ?? "not set")}</dd>`;
 
+  // The registration number has no API operation and no route of its own. It exists so a task
+  // can be reachable only by operating the interface.
+  const registration = field(
+    model.variant,
+    "registration_number",
+    "Company registration number",
+    model.account.registration_number ?? "",
+  );
+
   if (model.variant === "a") {
     return `<section aria-labelledby="account-heading">
-      <h2 id="account-heading">Account</h2><dl>${rows}</dl></section>`;
+      <h2 id="account-heading">Account</h2><dl>${rows}</dl>
+      <form id="registration-form" data-account="${model.account.id}">
+        ${registration}
+        <button type="submit" class="primary">Save registration</button>
+        <output id="registration-status" role="status"></output>
+      </form>
+    </section>`;
   }
   return `<div class="c-panel" role="region" aria-labelledby="account-heading">
     <div class="c-panel__head"><h2 class="c-panel__title" id="account-heading">Account</h2></div>
     <dl class="c-facts">${rows}</dl>
+    <form class="c-form" id="registration-form" data-account="${model.account.id}">
+      <div class="c-form__grid">${registration}</div>
+      <div class="c-form__actions">
+        <button class="c-btn c-btn--primary" type="submit">Save registration</button>
+        <output class="c-form__status" id="registration-status" role="status"></output>
+      </div>
+    </form>
   </div>`;
 }
 
