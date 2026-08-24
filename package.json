@@ -13,6 +13,7 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "env:init": "node tools/scripts/env-init.mjs",
     "db:start": "node tools/scripts/pg-dev.mjs start",
     "db:stop": "node tools/scripts/pg-dev.mjs stop",
     "db:migrate": "node --env-file-if-exists=.env --import tsx apps/control-plane/src/db/migrate-cli.ts",

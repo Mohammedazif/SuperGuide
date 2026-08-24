@@ -49,10 +49,27 @@ packages/widget-ui   the chat surface, in a closed shadow root
 eval/                thirty task fixtures and the harness that scores them
 ```
 
+## Seeing it work
+
+```
+pnpm install && pnpm build
+pnpm db:start          # or: docker compose up -d
+pnpm demo
+```
+
+That prints a URL. Open it in any browser and the widget is on the page.
+
+![The widget on the fixture application](docs/demo.png)
+
+`INTEGRATION.md` covers putting it on a real product: origin allowlist, OpenAPI ingestion,
+identity, capabilities, procedures, escalation, and what a customer's Content-Security-Policy
+needs.
+
 ## Running it
 
 ```
 pnpm install
+pnpm env:init                 # writes .env, generating the keys
 pnpm build
 
 docker compose up -d          # PostgreSQL 16 with pgvector
@@ -62,8 +79,16 @@ pnpm --filter @superguide/fixture-app run dev
 pnpm --filter @superguide/control-plane run dev
 ```
 
-Copy `.env.example` to `.env` first. Every variable is validated by a Zod schema at process
-start and the process exits non-zero if the environment is wrong.
+Run `pnpm env:init` first. It writes `.env` from `.env.example` and generates the three
+signing and encryption keys, leaving `ANTHROPIC_API_KEY` for you to fill in. Every variable
+is validated by a Zod schema at process start and the process exits non-zero if the
+environment is wrong.
+
+No key value is committed anywhere in this repository, and none should be: `.env.example`
+ships those three fields blank, and CI generates its own per run. The fixed
+`Buffer.alloc(32, n)` keys in the test and eval harnesses are the exception that proves it —
+they are constants in code rather than committed secrets, and they are fixed because
+`pnpm eval --check-determinism` requires two runs to reproduce byte for byte.
 
 Without Docker, `pnpm db:start` runs the same PostgreSQL 16 from a local install
 (`SG_PG_HOME`, default `~/.local/superguide-pg16`) on the same port, with the same two roles.

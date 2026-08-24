@@ -9,15 +9,19 @@ env:
   SG_DATABASE_URL: postgres://sg_app:sg_app_dev@127.0.0.1:55432/superguide
   SG_MIGRATION_DATABASE_URL: postgres://sg_migrator:sg_migrator_dev@127.0.0.1:55432/superguide
   SG_PUBLIC_ORIGIN: http://127.0.0.1:8080
-  SG_SESSION_SIGNING_KEY: <removed-from-history>
-  SG_SECRET_ENCRYPTION_KEY: <removed-from-history>
-  SG_WEBHOOK_SIGNING_KEY: <removed-from-history>
 
 jobs:
   static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Generate run-scoped keys
+        run: |
+          {
+            echo "SG_SESSION_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "SG_WEBHOOK_SIGNING_KEY=$(openssl rand -base64 32)"
+          } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -45,6 +49,13 @@ jobs:
           --health-interval 2s --health-timeout 3s --health-retries 30
     steps:
       - uses: actions/checkout@v4
+      - name: Generate run-scoped keys
+        run: |
+          {
+            echo "SG_SESSION_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "SG_WEBHOOK_SIGNING_KEY=$(openssl rand -base64 32)"
+          } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
