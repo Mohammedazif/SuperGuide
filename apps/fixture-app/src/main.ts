@@ -1,12 +1,13 @@
+import { loadFixtureEnvironment } from "./env.js";
 import { buildFixtureApp } from "./server.js";
 
-const port = Number(process.env["FIXTURE_PORT"] ?? "8099");
+const env = loadFixtureEnvironment();
 const fixture = buildFixtureApp({
-  widgetScriptUrl: process.env["FIXTURE_WIDGET_URL"] ?? null,
-  widgetProductId: process.env["FIXTURE_PRODUCT_ID"] ?? null,
-  apiUrl: process.env["FIXTURE_API_URL"] ?? null,
-  strictCsp: process.env["FIXTURE_STRICT_CSP"] === "true",
+  widgetScriptUrl: env.FIXTURE_WIDGET_URL,
+  widgetProductId: env.FIXTURE_PRODUCT_ID,
+  apiUrl: env.FIXTURE_API_URL,
+  strictCsp: env.FIXTURE_STRICT_CSP,
 });
 
-await fixture.app.listen({ port, host: "127.0.0.1" });
-process.stdout.write(`fixture app listening on http://127.0.0.1:${port}\n`);
+await fixture.app.listen({ port: env.FIXTURE_PORT, host: "127.0.0.1" });
+process.stdout.write(`fixture app listening on http://127.0.0.1:${String(env.FIXTURE_PORT)}\n`);

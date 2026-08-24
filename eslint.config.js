@@ -285,7 +285,12 @@ export default tseslint.config(
   ),
 
   {
-    files: ["apps/control-plane/src/env.ts", "tools/**/*.mjs", "tools/**/*.js"],
+    files: [
+      "apps/control-plane/src/env.ts",
+      "apps/fixture-app/src/env.ts",
+      "tools/**/*.mjs",
+      "tools/**/*.js",
+    ],
     rules: { "no-restricted-properties": "off" },
   },
 

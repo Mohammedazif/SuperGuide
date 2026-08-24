@@ -65,7 +65,7 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
   asset("app.js", "text/javascript; charset=utf-8");
 
   app.get("/openapi.json", (request, reply) => {
-    const base = `${request.protocol}://${request.hostname}${request.port === undefined ? "" : ""}`;
+    const base = `${request.protocol}://${request.headers.host ?? request.hostname}`;
     void reply.send(openApiDocument(base));
   });
 

@@ -31,6 +31,9 @@ const RULES = [
     id: "csp-manipulation",
     description: "Any read or write of a Content-Security-Policy header",
     pattern: /content-security-policy/i,
+    // apps/fixture-app stands in for a customer's own site. It serves a strict policy so the
+    // widget can be proved to work under one. The product itself never touches the header.
+    exclude: [/^apps\/fixture-app\//],
   },
   {
     id: "dynamic-code",
@@ -91,12 +94,17 @@ function collectFiles() {
 function main() {
   const files = collectFiles();
   const hits = [];
+  const excluded = new Set();
 
   for (const file of files) {
     const isTest = TEST_FILE.test(file);
     const lines = readFileSync(join(REPO_ROOT, file), "utf8").split("\n");
     for (const rule of RULES) {
       if (rule.skipTests === true && isTest) continue;
+      if (rule.exclude !== undefined && rule.exclude.some((pattern) => pattern.test(file))) {
+        excluded.add(`${rule.id} <- ${String(rule.exclude)}`);
+        continue;
+      }
       lines.forEach((line, index) => {
         if (!rule.pattern.test(line)) return;
         if (rule.allowLine !== undefined && rule.allowLine.test(line)) return;
@@ -106,6 +114,9 @@ function main() {
   }
 
   console.log(`check:forbidden scanned ${files.length} files against ${RULES.length} rules`);
+  for (const note of [...excluded].sort()) {
+    console.log(`  scoped: ${note}`);
+  }
   if (hits.length === 0) {
     console.log("no forbidden patterns found");
     return;

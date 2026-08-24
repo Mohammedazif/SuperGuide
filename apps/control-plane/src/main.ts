@@ -10,7 +10,13 @@ import { RejectingIdentityVerifier } from "./auth/identity-verifier.js";
 import { recoverInFlightTurns } from "./turn/recovery.js";
 import { buildServer } from "./server.js";
 import { createAgentTurnRunner } from "./turn/runner.js";
-import { unconfiguredPlannerExecutor } from "./turn/unconfigured-executor.js";
+import { createTurnExecutor } from "./turn/loop.js";
+import { AnthropicModelClient } from "./model/client.js";
+import {
+  NoKnowledgeRetriever,
+  NoProcedureMatcher,
+  NoTaskVerifier,
+} from "./turn/ports.js";
 
 const SHUTDOWN_GRACE_MS = 15_000;
 
@@ -27,6 +33,8 @@ const confirmations = new ConfirmationRegistry();
 await notifier.start();
 await recoverInFlightTurns(db, logger);
 
+const modelClient = new AnthropicModelClient({ apiKey: env.ANTHROPIC_API_KEY });
+
 const turnRunner = createAgentTurnRunner({
   env,
   logger,
@@ -34,7 +42,18 @@ const turnRunner = createAgentTurnRunner({
   ephemeral,
   pendingCalls,
   confirmations,
-  execute: unconfiguredPlannerExecutor,
+  execute: createTurnExecutor({
+    env,
+    logger,
+    db,
+    ephemeral,
+    pendingCalls,
+    confirmations,
+    modelClient,
+    procedureMatcher: new NoProcedureMatcher(),
+    knowledgeRetriever: new NoKnowledgeRetriever(),
+    taskVerifier: new NoTaskVerifier(),
+  }),
 });
 
 const app = buildServer({
