@@ -4,8 +4,8 @@ packages:
   - "eval/harness"
   - "tools/eslint-plugin-superguide"
 
+# esbuild ships a platform-specific binary that its install script links into place, and
+# vitest and tsx both need it. Approving the build deliberately is what keeps a clean
+# `pnpm install --frozen-lockfile` from failing on ERR_PNPM_IGNORED_BUILDS.
 allowBuilds:
-  esbuild: set this to true or false
-
-onlyBuiltDependencies:
-  - esbuild
+  esbuild: true
