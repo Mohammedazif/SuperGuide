@@ -1,0 +1,45 @@
+id: update_postcode
+version: 1
+title: Change the billing postcode and confirm it landed
+message: Please change our billing postcode to EH3 9DR.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+procedure: |
+  id: update_billing_address
+  version: 1
+  title: Update the billing address
+  when: user wants to change billing or invoice address
+  preconditions:
+    - user.verified
+  steps:
+    - prefer_api:
+        operation: updateBillingAddress
+  success:
+    - api:
+        operation: getAccount
+        params:
+          accountId: "{{params.accountId}}"
+        json_path: $.billing_address.postal_code
+        equals: "{{params.postal_code}}"
+transcript:
+  - tool: api_updateBillingAddress
+    input:
+      intent: Change the postcode.
+      accountId: acct_01HQ8G7Z2K
+      line1: 18 Harbour Road
+      line2: null
+      city: Bristol
+      postal_code: EH3 9DR
+      country: GB
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your billing postcode is now EH3 9DR.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.billing_address.postal_code, equals: EH3 9DR }
+    - { kind: message_contains, text: EH3 9DR }

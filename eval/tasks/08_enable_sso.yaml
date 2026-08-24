@@ -1,0 +1,20 @@
+id: enable_sso
+version: 1
+title: Turn single sign-on on
+message: Please turn on single sign-on for us.
+startPath: /settings/sso
+identity: { tier: verified, scopes: [sso:write], role: owner }
+transcript:
+  - tool: api_updateSsoSettings
+    input: { intent: Turn single sign-on on., accountId: acct_01HQ8G7Z2K, enabled: true }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Single sign-on is now on for your account.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: "now on" }

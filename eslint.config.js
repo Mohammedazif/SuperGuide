@@ -302,9 +302,16 @@ export default tseslint.config(
       INTERNAL_PACKAGES.contractInternal,
       INTERNAL_PACKAGES.procedures,
       INTERNAL_PACKAGES.policy,
+      INTERNAL_PACKAGES.observer,
+      INTERNAL_PACKAGES.executor,
     ],
-    "the eval harness may import contract, procedures, and policy only.",
+    "the eval harness may not import the widget or its transport.",
   ),
+
+  {
+    files: ["eval/harness/**/*.ts"],
+    rules: { "no-console": "off", "no-restricted-properties": "off" },
+  },
 
   boundary(
     ["apps/control-plane/**/*.ts"],

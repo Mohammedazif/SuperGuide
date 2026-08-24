@@ -1,0 +1,28 @@
+id: update_city
+version: 1
+title: Move the billing address to another city
+message: We have moved. Our billing address is now 4 Canal Street, Manchester, M1 3HE.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+transcript:
+  - tool: api_updateBillingAddress
+    input:
+      intent: Replace the billing address.
+      accountId: acct_01HQ8G7Z2K
+      line1: 4 Canal Street
+      line2: null
+      city: Manchester
+      postal_code: M1 3HE
+      country: GB
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your billing address is now 4 Canal Street, Manchester, M1 3HE.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.billing_address.city, equals: Manchester }
+    - { kind: api_json_path, path: $.billing_address.postal_code, equals: M1 3HE }

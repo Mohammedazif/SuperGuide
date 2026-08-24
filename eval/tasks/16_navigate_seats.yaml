@@ -1,0 +1,18 @@
+id: navigate_seats
+version: 1
+title: Take the person to the seats page
+message: I want to see who is using our seats.
+transcript:
+  - tool: navigate_seat_settings
+    input: { intent: Take you to seats. }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: You are on the seats page, where every seat on the account is listed.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L3
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: seats page }

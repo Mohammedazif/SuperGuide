@@ -1,0 +1,21 @@
+id: capability_open_dialog
+version: 1
+title: Open the seat dialog through a declared capability
+message: Open the invite dialog so I can add someone.
+startPath: /settings/seats
+capabilities:
+  - { name: open_seat_dialog, risk: read, reply: { status: ok, data: { opened: true } } }
+transcript:
+  - tool: capability_open_seat_dialog
+    input: { intent: Open the invite dialog., }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: The invite dialog is open for you.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L2
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: invite dialog }

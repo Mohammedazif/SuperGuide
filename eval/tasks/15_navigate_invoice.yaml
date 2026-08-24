@@ -1,0 +1,19 @@
+id: navigate_invoice
+version: 1
+title: Take the person to one invoice
+message: Show me invoice NW-2026-06.
+startPath: /invoices
+transcript:
+  - tool: navigate_invoice_detail
+    input: { intent: Open that invoice., invoiceId: inv_2026_06 }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: This is invoice NW-2026-06, which is still open.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L3
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: NW-2026-06 }

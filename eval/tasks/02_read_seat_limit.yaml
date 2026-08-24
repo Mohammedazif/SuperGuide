@@ -1,0 +1,19 @@
+id: read_seat_limit
+version: 1
+title: Answer how many seats are included
+message: How many seats does our plan include?
+transcript:
+  - tool: api_getAccount
+    input: { intent: Read the seat limit., accountId: acct_01HQ8G7Z2K }
+  - tool: finish
+    input:
+      intent: Report the limit.
+      summary: Your plan includes 25 seats.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.seat_limit, equals: 25 }
+    - { kind: message_contains, text: "25" }

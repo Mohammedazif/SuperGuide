@@ -1,0 +1,18 @@
+id: escalate_no_mechanism
+version: 1
+title: Hand over a request nothing can satisfy
+message: Please close our account and delete all our data.
+identity: { tier: verified, scopes: [], role: owner }
+transcript:
+  - tool: escalate
+    input:
+      intent: Hand this to a person.
+      reason: closing_an_account_is_not_automatable
+      summary: Closing an account is not something I am able to do, so a person will pick this up.
+expect:
+  resolution: escalated
+  ladderLevel: L6
+  maxSteps: 1
+  predicates:
+    - { kind: state_unchanged }
+    - { kind: message_contains, text: not something I am able to do }

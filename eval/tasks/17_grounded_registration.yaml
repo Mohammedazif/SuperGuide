@@ -1,0 +1,26 @@
+id: grounded_registration
+version: 1
+title: Set the registration number, which no API exposes
+message: Set our company registration number to SC441122.
+groundedActions: true
+identity: { tier: verified, scopes: [], role: owner }
+transcript:
+  - tool: ui_set_value
+    input:
+      intent: Type the registration number into the field.
+      ref: "{{ref:Company registration number}}"
+      value: SC441122
+  - tool: ui_click
+    input: { intent: Save the registration number., ref: "{{ref:Save registration}}" }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your company registration number is saved as SC441122.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L4
+  maxSteps: 3
+  predicates:
+    - { kind: api_json_path, path: $.registration_number, equals: SC441122 }
+    - { kind: message_contains, text: SC441122 }

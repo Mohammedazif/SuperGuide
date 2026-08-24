@@ -1,0 +1,19 @@
+id: read_sso_state
+version: 1
+title: Answer whether single sign-on is on
+message: Is single sign-on turned on for us?
+startPath: /settings/sso
+transcript:
+  - tool: api_getSsoSettings
+    input: { intent: Read the sign-on settings., accountId: acct_01HQ8G7Z2K }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Single sign-on is currently switched off for your account.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: "switched off" }

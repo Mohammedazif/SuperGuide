@@ -1,0 +1,31 @@
+id: read_then_update
+version: 1
+title: Read the address before changing one field of it
+message: Just change the postcode to BS1 5TR and leave everything else alone.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+transcript:
+  - tool: api_getAccount
+    input: { intent: Read the current address first., accountId: acct_01HQ8G7Z2K }
+  - tool: api_updateBillingAddress
+    input:
+      intent: Change only the postcode.
+      accountId: acct_01HQ8G7Z2K
+      line1: 18 Harbour Road
+      line2: null
+      city: Bristol
+      postal_code: BS1 5TR
+      country: GB
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your postcode is now BS1 5TR and the rest of the address is unchanged.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 3
+  predicates:
+    - { kind: api_json_path, path: $.billing_address.postal_code, equals: BS1 5TR }
+    - { kind: api_json_path, path: $.billing_address.line1, equals: 18 Harbour Road }
+    - { kind: api_json_path, path: $.billing_address.city, equals: Bristol }

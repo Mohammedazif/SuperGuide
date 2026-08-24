@@ -1,0 +1,20 @@
+id: read_billing_city
+version: 1
+title: Answer which city the billing address is in
+message: Which city is our billing address in?
+startPath: /settings/billing
+transcript:
+  - tool: api_getAccount
+    input: { intent: Read the billing address., accountId: acct_01HQ8G7Z2K }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your billing address is in Bristol.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.billing_address.city, equals: Bristol }
+    - { kind: message_contains, text: Bristol }

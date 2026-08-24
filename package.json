@@ -21,7 +21,7 @@
     "test:integration": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project integration",
     "test:security": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project security",
     "test:e2e": "playwright test",
-    "eval": "node --import tsx eval/harness/src/cli.ts",
+    "eval": "node --env-file-if-exists=.env --import tsx eval/harness/src/cli.ts",
     "check:forbidden": "node tools/scripts/check-forbidden.mjs",
     "check:bundle-boundary": "node tools/scripts/check-bundle-boundary.mjs",
     "test:unit:coverage": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project unit --coverage"

@@ -2,6 +2,7 @@ import type { DigestDiff, DigestElement, PageDigest } from "@superguide/contract
 import { accessibleName } from "./accessible-name.js";
 import { isHeadingRole, isInteractiveRole, isLandmarkRole, isObservableRole, roleOf } from "./roles.js";
 import { mintRef, stableIdentifier } from "./refs.js";
+import { asInput, asSelect, asTextArea, asFrame } from "./realm.js";
 
 export interface ObserveOptions {
   maxElements?: number;
@@ -49,8 +50,11 @@ function stateOf(element: Element): DigestElement["state"] | undefined {
 
   const checked = element.getAttribute("aria-checked");
   if (checked === "true" || checked === "false") state.checked = checked === "true";
-  else if (element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio")) {
-    state.checked = element.checked;
+  else {
+    const input = asInput(element);
+    if (input !== null && (input.type === "checkbox" || input.type === "radio")) {
+      state.checked = input.checked;
+    }
   }
 
   const expanded = element.getAttribute("aria-expanded");
@@ -67,20 +71,16 @@ function stateOf(element: Element): DigestElement["state"] | undefined {
 }
 
 function isPasswordField(element: Element): boolean {
-  return element instanceof HTMLInputElement && element.type === "password";
+  const input = asInput(element);
+  return input !== null && input.type === "password";
 }
 
 // Values are omitted by default. A value appears only when the product's own allowlist names
 // the field, and a password field never appears under any configuration.
 function valueOf(element: Element, allowlist: ReadonlySet<string>): string | undefined {
   if (isPasswordField(element)) return undefined;
-  if (
-    !(element instanceof HTMLInputElement) &&
-    !(element instanceof HTMLTextAreaElement) &&
-    !(element instanceof HTMLSelectElement)
-  ) {
-    return undefined;
-  }
+  const field = asInput(element) ?? asTextArea(element) ?? asSelect(element);
+  if (field === null) return undefined;
 
   const identifiers = [
     element.getAttribute("name"),
@@ -90,7 +90,7 @@ function valueOf(element: Element, allowlist: ReadonlySet<string>): string | und
 
   const permitted = identifiers.some((identifier) => allowlist.has(identifier.toLowerCase()));
   if (!permitted) return undefined;
-  return element.value;
+  return field.value;
 }
 
 function pathSignature(element: Element): string {
@@ -151,9 +151,10 @@ export class PageObserver {
       for (const element of elements) {
         if (element.shadowRoot !== null) visit(element.shadowRoot, depth + 1);
 
-        if (element instanceof HTMLIFrameElement) {
+        const frame = asFrame(element);
+        if (frame !== null) {
           try {
-            const inner = element.contentDocument;
+            const inner = frame.contentDocument;
             // A cross-origin frame throws or returns null here. Neither is an error.
             if (inner !== null) visit(inner, depth + 1);
           } catch {

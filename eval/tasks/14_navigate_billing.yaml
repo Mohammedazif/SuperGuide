@@ -1,0 +1,18 @@
+id: navigate_billing
+version: 1
+title: Take the person to billing settings
+message: Where do I change our billing details?
+transcript:
+  - tool: navigate_billing_settings
+    input: { intent: Take you to billing settings. }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: You are on the billing settings page now.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L3
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: billing settings }

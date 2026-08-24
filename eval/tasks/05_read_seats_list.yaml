@@ -1,0 +1,19 @@
+id: read_seats_list
+version: 1
+title: Answer who holds a seat
+message: Who is on our account at the moment?
+startPath: /settings/seats
+transcript:
+  - tool: api_listSeats
+    input: { intent: List the seats., accountId: acct_01HQ8G7Z2K }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Dana, Ray, Kim and Sasha hold seats on your account.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: Dana }

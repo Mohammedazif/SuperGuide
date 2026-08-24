@@ -16,6 +16,18 @@
     "@superguide/contract": "workspace:*",
     "@superguide/procedures": "workspace:*",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@superguide/policy": "workspace:*",
+    "jsdom": "^26.1.0",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "@superguide/observer": "workspace:*",
+    "@superguide/executor": "workspace:*",
+    "@superguide/control-plane": "workspace:*",
+    "@superguide/fixture-app": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/pg": "^8.15.5"
   }
 }

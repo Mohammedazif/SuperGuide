@@ -1,0 +1,18 @@
+id: ask_which_address
+version: 1
+title: Ask one question rather than guess
+message: Change our address please.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+transcript:
+  - tool: ask_user
+    input:
+      intent: Find out which address is meant.
+      question: Do you mean the billing address, or the address a person is registered at?
+expect:
+  resolution: in_progress
+  ladderLevel: L5
+  maxSteps: 1
+  predicates:
+    - { kind: state_unchanged }
+    - { kind: message_contains, text: Do you mean }

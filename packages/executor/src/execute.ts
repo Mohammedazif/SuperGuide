@@ -5,7 +5,7 @@ import {
   type ExecutorAction,
   type PageDigest,
 } from "@superguide/contract/public";
-import type { ObserveOptions, PageObserver } from "@superguide/observer";
+import { asInput, asSelect, asTextArea, type ObserveOptions, type PageObserver } from "@superguide/observer";
 import { DEFAULT_SETTLE, waitForSettle } from "./settle.js";
 import type {
   CapabilityRegistry,
@@ -62,17 +62,20 @@ function isGrounded(action: ExecutorAction): boolean {
 // Frameworks that track input values read them through the prototype descriptor, so setting
 // the property directly is invisible to them.
 function setValueObservably(element: HTMLInputElement | HTMLTextAreaElement, value: string): void {
+  const view = element.ownerDocument.defaultView;
   const prototype =
-    element instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
+    asTextArea(element) !== null
+      ? (view?.HTMLTextAreaElement.prototype ?? null)
+      : (view?.HTMLInputElement.prototype ?? null);
 
-  const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+  const descriptor =
+    prototype === null ? undefined : Object.getOwnPropertyDescriptor(prototype, "value");
   if (descriptor?.set !== undefined) descriptor.set.call(element, value);
   else element.value = value;
 
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  const EventConstructor = view?.Event ?? Event;
+  element.dispatchEvent(new EventConstructor("input", { bubbles: true }));
+  element.dispatchEvent(new EventConstructor("change", { bubbles: true }));
 }
 
 function fillRouteTemplate(
@@ -195,22 +198,22 @@ export class ActionExecutor {
       case "set_value": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
-        const element = resolved.element;
-        if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) {
+        const field = asInput(resolved.element) ?? asTextArea(resolved.element);
+        if (field === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a text field`, this.digest(), url);
         }
-        setValueObservably(element, action.value);
+        setValueObservably(field, action.value);
         return { status: "ok", data: { ref: action.ref }, digest: null, url };
       }
 
       case "select_option": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
-        const element = resolved.element;
-        if (!(element instanceof HTMLSelectElement)) {
+        const select = asSelect(resolved.element);
+        if (select === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a select`, this.digest(), url);
         }
-        const match = [...element.options].find(
+        const match = [...select.options].find(
           (option) => option.value === action.value || option.label === action.value,
         );
         if (match === undefined) {
@@ -221,20 +224,22 @@ export class ActionExecutor {
             url,
           );
         }
-        element.value = match.value;
-        element.dispatchEvent(new Event("input", { bubbles: true }));
-        element.dispatchEvent(new Event("change", { bubbles: true }));
+        const selectView = select.ownerDocument.defaultView;
+        const SelectEvent = selectView?.Event ?? Event;
+        select.value = match.value;
+        select.dispatchEvent(new SelectEvent("input", { bubbles: true }));
+        select.dispatchEvent(new SelectEvent("change", { bubbles: true }));
         return { status: "ok", data: { ref: action.ref, value: match.value }, digest: null, url };
       }
 
       case "set_checked": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
-        const element = resolved.element;
-        if (!(element instanceof HTMLInputElement)) {
+        const checkbox = asInput(resolved.element);
+        if (checkbox === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a checkbox`, this.digest(), url);
         }
-        if (element.checked !== action.checked) element.click();
+        if (checkbox.checked !== action.checked) checkbox.click();
         return { status: "ok", data: { ref: action.ref, checked: action.checked }, digest: null, url };
       }
 
@@ -245,9 +250,11 @@ export class ActionExecutor {
           if (!resolved.ok) return resolved.outcome;
           target = resolved.element;
         }
+        const keyView = target.ownerDocument.defaultView;
+        const KeyboardEventConstructor = keyView?.KeyboardEvent ?? KeyboardEvent;
         for (const type of ["keydown", "keypress", "keyup"] as const) {
           target.dispatchEvent(
-            new KeyboardEvent(type, { key: action.key, bubbles: true, cancelable: true }),
+            new KeyboardEventConstructor(type, { key: action.key, bubbles: true, cancelable: true }),
           );
         }
         return { status: "ok", data: { key: action.key }, digest: null, url };
@@ -270,8 +277,10 @@ export class ActionExecutor {
       case "hover": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
+        const hoverView = resolved.element.ownerDocument.defaultView;
+        const HoverEvent = hoverView?.Event ?? Event;
         for (const type of ["pointerover", "mouseover", "mouseenter"] as const) {
-          resolved.element.dispatchEvent(new Event(type, { bubbles: type !== "mouseenter" }));
+          resolved.element.dispatchEvent(new HoverEvent(type, { bubbles: type !== "mouseenter" }));
         }
         await waitForSettle(this.#options.document, this.#options.settle ?? DEFAULT_SETTLE);
         return { status: "ok", data: { ref: action.ref }, digest: this.digest(), url };

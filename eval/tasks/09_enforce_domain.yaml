@@ -1,0 +1,25 @@
+id: enforce_domain
+version: 1
+title: Enforce a domain for single sign-on
+message: Everyone at northwind.example should have to sign in through our provider.
+startPath: /settings/sso
+seed: { sso_enabled: true }
+identity: { tier: verified, scopes: [sso:write], role: owner }
+transcript:
+  - tool: api_updateSsoSettings
+    input:
+      intent: Enforce the domain.
+      accountId: acct_01HQ8G7Z2K
+      enabled: true
+      enforced_domain: northwind.example
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Anyone with a northwind.example address must now sign in through your provider.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: message_contains, text: northwind.example }

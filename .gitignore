@@ -9,3 +9,9 @@ playwright-report/
 .pgdata/
 eval/results/
 .tsbuild/
+
+# emitted output must never land in a source tree
+**/src/**/*.d.ts
+**/src/**/*.d.ts.map
+**/src/**/*.js.map
+**/src/**/*.js

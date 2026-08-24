@@ -4,10 +4,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "lib": [
-      "ES2023"
-    ],
-    "types": [
-      "node"
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
     ]
   },
   "include": [
@@ -23,6 +22,21 @@
     },
     {
       "path": "../../packages/procedures"
+    },
+    {
+      "path": "../../packages/policy"
+    },
+    {
+      "path": "../../packages/observer"
+    },
+    {
+      "path": "../../packages/executor"
+    },
+    {
+      "path": "../../apps/control-plane"
+    },
+    {
+      "path": "../../apps/fixture-app"
     }
   ]
 }

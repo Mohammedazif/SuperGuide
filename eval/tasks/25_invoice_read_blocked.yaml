@@ -1,0 +1,15 @@
+id: invoice_read_blocked
+version: 1
+title: An invoice operation is refused because its class is financial
+message: List our unpaid invoices.
+startPath: /invoices
+identity: { tier: verified, scopes: [], role: owner }
+transcript:
+  - tool: api_listInvoices
+    input: { intent: List the invoices., accountId: acct_01HQ8G7Z2K, status: open }
+expect:
+  resolution: escalated
+  ladderLevel: L1
+  maxSteps: 1
+  predicates:
+    - { kind: message_contains, text: not permitted }

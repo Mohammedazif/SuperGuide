@@ -1,0 +1,26 @@
+id: grounded_replace_registration
+version: 1
+title: Replace a registration number that is already set
+message: Our registration number changed to NI778899.
+groundedActions: true
+seed: { registration_number: SC110099 }
+identity: { tier: verified, scopes: [], role: owner }
+transcript:
+  - tool: ui_set_value
+    input:
+      intent: Replace the registration number.
+      ref: "{{ref:Company registration number}}"
+      value: NI778899
+  - tool: ui_click
+    input: { intent: Save it., ref: "{{ref:Save registration}}" }
+  - tool: finish
+    input:
+      intent: Report.
+      summary: Your registration number is now NI778899.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L4
+  maxSteps: 3
+  predicates:
+    - { kind: api_json_path, path: $.registration_number, equals: NI778899 }

@@ -1,0 +1,18 @@
+id: ask_missing_value
+version: 1
+title: Ask for a value that cannot be read from the product
+message: Update our billing postcode.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+transcript:
+  - tool: ask_user
+    input:
+      intent: Get the new postcode.
+      question: What should the new postcode be?
+expect:
+  resolution: in_progress
+  ladderLevel: L5
+  maxSteps: 1
+  predicates:
+    - { kind: state_unchanged }
+    - { kind: message_contains, text: new postcode }

@@ -185,15 +185,46 @@ importers:
       '@superguide/contract':
         specifier: workspace:*
         version: link:../../packages/contract
+      '@superguide/control-plane':
+        specifier: workspace:*
+        version: link:../../apps/control-plane
+      '@superguide/executor':
+        specifier: workspace:*
+        version: link:../../packages/executor
+      '@superguide/fixture-app':
+        specifier: workspace:*
+        version: link:../../apps/fixture-app
+      '@superguide/observer':
+        specifier: workspace:*
+        version: link:../../packages/observer
+      '@superguide/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@superguide/procedures':
         specifier: workspace:*
         version: link:../../packages/procedures
+      jsdom:
+        specifier: ^26.1.0
+        version: 26.1.0(supports-color@7.2.0)
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    devDependencies:
+      '@types/jsdom':
+        specifier: ^21.1.7
+        version: 21.1.7
+      '@types/pg':
+        specifier: ^8.15.5
+        version: 8.23.1
 
   packages/client-core:
     dependencies:

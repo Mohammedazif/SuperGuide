@@ -1,0 +1,19 @@
+id: grounded_blocked_when_off
+version: 1
+title: A grounded action is unreachable when the flag is off
+message: Type SC000000 into the registration field for me.
+groundedActions: false
+identity: { tier: verified, scopes: [], role: owner }
+transcript:
+  - tool: escalate
+    input:
+      intent: Hand this over.
+      reason: no_mechanism_available
+      summary: I cannot type into this page, and there is no API for the registration number.
+expect:
+  resolution: escalated
+  ladderLevel: L6
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.registration_number, equals: null }
+    - { kind: message_contains, text: cannot type }

@@ -1,0 +1,45 @@
+id: rejected_write_escalates
+version: 1
+title: A write the API rejects is never reported as done
+message: Change our billing country to United Kingdom.
+startPath: /settings/billing
+identity: { tier: verified, scopes: [billing:write], role: owner }
+procedure: |
+  id: update_billing_address
+  version: 1
+  title: Update the billing address
+  when: user wants to change billing or invoice address
+  preconditions:
+    - user.verified
+  steps:
+    - prefer_api:
+        operation: updateBillingAddress
+  success:
+    - api:
+        operation: getAccount
+        params:
+          accountId: "{{params.accountId}}"
+        json_path: $.billing_address.country
+        equals: "{{params.country}}"
+transcript:
+  - tool: api_updateBillingAddress
+    input:
+      intent: Change the country.
+      accountId: acct_01HQ8G7Z2K
+      line1: 18 Harbour Road
+      line2: null
+      city: Bristol
+      postal_code: BS1 4TT
+      country: United Kingdom
+  - tool: finish
+    input:
+      intent: Report.
+      summary: All done, your country is updated.
+      resolutionState: resolved
+expect:
+  resolution: escalated
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.billing_address.country, equals: GB }
+    - { kind: message_contains, text: could not confirm }

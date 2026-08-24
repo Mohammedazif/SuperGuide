@@ -1,0 +1,19 @@
+id: read_plan
+version: 1
+title: Answer which plan the account is on
+message: What plan are we on at the moment?
+transcript:
+  - tool: api_getAccount
+    input: { intent: Read the account., accountId: acct_01HQ8G7Z2K }
+  - tool: finish
+    input:
+      intent: Report the plan.
+      summary: You are on the growth plan, with 25 seats included.
+      resolutionState: resolved
+expect:
+  resolution: resolved
+  ladderLevel: L1
+  maxSteps: 2
+  predicates:
+    - { kind: api_json_path, path: $.plan, equals: growth }
+    - { kind: message_contains, text: growth }
