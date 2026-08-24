@@ -45,7 +45,7 @@ describe("the transport", () => {
     const offline = new Transport({
       apiUrl: "https://api.trysuperguide.com",
       productId: PRODUCT,
-      fetchImplementation: (() => Promise.reject(new Error("offline"))) as unknown as typeof fetch,
+      fetchImplementation: () => Promise.reject(new Error("offline")),
     });
 
     const result = await offline.openSession();
@@ -58,12 +58,12 @@ describe("the transport", () => {
     const limited = new Transport({
       apiUrl: "https://api.trysuperguide.com",
       productId: PRODUCT,
-      fetchImplementation: (() =>
+      fetchImplementation: () =>
         Promise.resolve(
           new Response(JSON.stringify({ error: { code: "rate_limited", message: "slow down" } }), {
             status: 429,
           }),
-        )) as unknown as typeof fetch,
+        ),
     });
 
     const result = await limited.openSession();

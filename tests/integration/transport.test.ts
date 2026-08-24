@@ -54,7 +54,6 @@ describe("turn transport", () => {
 
   it("accepts a chat with 202 and never blocks on the turn", async () => {
     const token = await openSession();
-    const started = Date.now();
     const response = await fetch(`${harness.baseUrl}/v1/chat`, {
       method: "POST",
       headers: headers(token),
@@ -69,7 +68,11 @@ describe("turn transport", () => {
     expect(response.status).toBe(202);
     const body = (await response.json()) as { turnId: string; conversationId: string };
     expect(body.turnId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(Date.now() - started).toBeLessThan(50);
+
+    // The turn this harness runs takes fifty milliseconds. It is still going when the reply
+    // has already been read, which is the property: the request never waits on the model.
+    expect(harness.deps.turnRunner.activeTurnCount()).toBeGreaterThan(0);
+    await harness.deps.turnRunner.drain(10_000);
   });
 
   it("streams durable events, resumes from Last-Event-ID with no gap and no duplicate", async () => {
