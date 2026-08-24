@@ -1,17 +1,17 @@
-node_modules/
-dist/
+
 coverage/
-*.tsbuildinfo
+dist/
+# emitted output must never land in a source tree
 .env
 .env.local
-test-results/
-playwright-report/
-.pgdata/
 eval/results/
-.tsbuild/
-
-# emitted output must never land in a source tree
+node_modules/
+.pgdata/
+playwright-report/
 **/src/**/*.d.ts
 **/src/**/*.d.ts.map
-**/src/**/*.js.map
 **/src/**/*.js
+**/src/**/*.js.map
+test-results/
+.tsbuild/
+*.tsbuildinfo
