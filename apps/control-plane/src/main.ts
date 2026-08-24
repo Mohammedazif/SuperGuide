@@ -1,0 +1,97 @@
+import { loadEnvironmentOrExit } from "./env.js";
+import { createLogger } from "./logging.js";
+import { createDatabase } from "./db/client.js";
+import { PostgresNotifier } from "./events/notifier.js";
+import { EphemeralBus } from "./events/ephemeral.js";
+import { StreamRegistry } from "./events/stream.js";
+import { PendingCalls } from "./turn/pending-calls.js";
+import { ConfirmationRegistry } from "./turn/confirmations.js";
+import { RejectingIdentityVerifier } from "./auth/identity-verifier.js";
+import { recoverInFlightTurns } from "./turn/recovery.js";
+import { buildServer } from "./server.js";
+import { createAgentTurnRunner } from "./turn/runner.js";
+import { unconfiguredPlannerExecutor } from "./turn/unconfigured-executor.js";
+
+const SHUTDOWN_GRACE_MS = 15_000;
+
+const env = loadEnvironmentOrExit();
+const logger = createLogger(env);
+const { db, close: closeDatabase } = createDatabase(env.SG_DATABASE_URL);
+
+const notifier = new PostgresNotifier(env.SG_DATABASE_URL, logger);
+const ephemeral = new EphemeralBus();
+const streams = new StreamRegistry();
+const pendingCalls = new PendingCalls();
+const confirmations = new ConfirmationRegistry();
+
+await notifier.start();
+await recoverInFlightTurns(db, logger);
+
+const turnRunner = createAgentTurnRunner({
+  env,
+  logger,
+  db,
+  ephemeral,
+  pendingCalls,
+  confirmations,
+  execute: unconfiguredPlannerExecutor,
+});
+
+const app = buildServer({
+  env,
+  logger,
+  db,
+  notifier,
+  ephemeral,
+  streams,
+  pendingCalls,
+  confirmations,
+  turnRunner,
+  identityVerifier: new RejectingIdentityVerifier(),
+  clock: { now: () => new Date() },
+});
+
+await app.listen({ port: env.SG_PORT, host: "0.0.0.0" });
+logger.info({ port: env.SG_PORT }, "control plane listening");
+
+let shuttingDown = false;
+
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "shutdown requested");
+
+  try {
+    await app.close();
+  } catch (error) {
+    logger.error({ err: error }, "server did not close cleanly");
+  }
+
+  await turnRunner.drain(SHUTDOWN_GRACE_MS);
+
+  const abandoned = pendingCalls.abandonAll({
+    status: "failed",
+    error: { code: "TIMEOUT", message: "The service is shutting down." },
+    digest: null,
+    url: "",
+  });
+  const undecided = confirmations.abandonAll("timeout");
+
+  const closed = streams.closeAll({
+    name: "turn.failed",
+    payload: {
+      event: "turn.failed",
+      turnId: "00000000-0000-4000-8000-000000000000",
+      code: "server_shutdown",
+      message: "The service is restarting. Reconnect to resume.",
+    },
+  });
+
+  await notifier.stop();
+  await closeDatabase();
+  logger.info({ abandoned, undecided, closed }, "shutdown complete");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

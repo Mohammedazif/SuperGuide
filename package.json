@@ -45,6 +45,14 @@
     "jose": "^6.2.10",
     "yaml": "^2.9.0",
     "fastify": "^5.12.1",
-    "@anthropic-ai/sdk": "^0.120.0"
+    "@anthropic-ai/sdk": "^0.120.0",
+    "pino": "^10.3.1",
+    "@superguide/contract": "workspace:*",
+    "@superguide/policy": "workspace:*",
+    "@superguide/procedures": "workspace:*",
+    "@superguide/observer": "workspace:*",
+    "@superguide/executor": "workspace:*",
+    "@superguide/client-core": "workspace:*",
+    "@superguide/widget-ui": "workspace:*"
   }
 }

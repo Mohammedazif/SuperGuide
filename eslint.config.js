@@ -30,13 +30,34 @@ const NETWORK_GLOBALS = [
   { name: "navigator", message: "This package must never perform network I/O." },
 ];
 
-function boundary(files, restricted) {
+const INTERNAL_PACKAGES = {
+  contractPublic: "@superguide/contract/public",
+  contractInternal: "@superguide/contract/internal",
+  policy: "@superguide/policy",
+  procedures: "@superguide/procedures",
+  observer: "@superguide/observer",
+  executor: "@superguide/executor",
+  clientCore: "@superguide/client-core",
+  widgetUi: "@superguide/widget-ui",
+};
+
+function forbidden(allowed) {
+  const permitted = new Set(allowed);
+  return Object.values(INTERNAL_PACKAGES).filter((name) => !permitted.has(name));
+}
+
+function importBoundary(allowed, message) {
+  const denied = forbidden(allowed);
   return {
-    files,
-    rules: {
-      "no-restricted-imports": ["error", { patterns: restricted }],
-    },
+    "no-restricted-imports": [
+      "error",
+      { paths: denied.map((name) => ({ name, message })), patterns: [] },
+    ],
   };
+}
+
+function boundary(files, allowed, message) {
+  return { files, rules: importBoundary(allowed, message) };
 }
 
 export default tseslint.config(
@@ -80,6 +101,10 @@ export default tseslint.config(
       "no-console": "error",
 
       "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "all" },
+      ],
       "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/switch-exhaustiveness-check": [
         "error",
@@ -124,10 +149,19 @@ export default tseslint.config(
     rules: { "superguide/no-module-level-mutable-state": "error" },
   },
 
-  boundary(
-    ["packages/contract/**/*.ts"],
-    [{ group: ["@superguide/*"], message: "contract is the root of the dependency graph." }],
-  ),
+  {
+    files: ["packages/contract/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            { group: ["@superguide/**"], message: "contract is the root of the dependency graph." },
+          ],
+        },
+      ],
+    },
+  },
 
   {
     files: ["packages/policy/**/*.ts"],
@@ -135,16 +169,14 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: ["@superguide/*", "!@superguide/contract/public"],
-              message: "policy may import only @superguide/contract/public.",
-            },
-            ...NODE_BUILTINS.map((g) => ({
-              group: [g],
-              message: "policy is pure: no node builtins.",
-            })),
-          ],
+          paths: forbidden([INTERNAL_PACKAGES.contractPublic]).map((name) => ({
+            name,
+            message: "policy may import only @superguide/contract/public.",
+          })),
+          patterns: NODE_BUILTINS.map((g) => ({
+            group: [g],
+            message: "policy is pure: no node builtins.",
+          })),
         },
       ],
       "no-restricted-globals": [
@@ -172,16 +204,14 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: ["@superguide/*", "!@superguide/contract/public"],
-              message: "procedures may import only @superguide/contract/public.",
-            },
-            ...NODE_BUILTINS.map((g) => ({
-              group: [g],
-              message: "procedures performs no I/O.",
-            })),
-          ],
+          paths: forbidden([INTERNAL_PACKAGES.contractPublic]).map((name) => ({
+            name,
+            message: "procedures may import only @superguide/contract/public.",
+          })),
+          patterns: NODE_BUILTINS.map((g) => ({
+            group: [g],
+            message: "procedures performs no I/O.",
+          })),
         },
       ],
       "no-restricted-globals": ["error", ...NETWORK_GLOBALS],
@@ -194,13 +224,14 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: ["@superguide/*", "!@superguide/contract/public"],
-              message: "observer may import only @superguide/contract/public.",
-            },
-            ...NODE_BUILTINS.map((g) => ({ group: [g], message: "observer runs in the browser." })),
-          ],
+          paths: forbidden([INTERNAL_PACKAGES.contractPublic]).map((name) => ({
+            name,
+            message: "observer may import only @superguide/contract/public.",
+          })),
+          patterns: NODE_BUILTINS.map((g) => ({
+            group: [g],
+            message: "observer runs in the browser.",
+          })),
         },
       ],
       "no-restricted-globals": ["error", ...NETWORK_GLOBALS],
@@ -213,17 +244,17 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: [
-                "@superguide/*",
-                "!@superguide/contract/public",
-                "!@superguide/observer",
-              ],
-              message: "executor may import only contract/public and observer.",
-            },
-            ...NODE_BUILTINS.map((g) => ({ group: [g], message: "executor runs in the browser." })),
-          ],
+          paths: forbidden([
+            INTERNAL_PACKAGES.contractPublic,
+            INTERNAL_PACKAGES.observer,
+          ]).map((name) => ({
+            name,
+            message: "executor may import only contract/public and observer.",
+          })),
+          patterns: NODE_BUILTINS.map((g) => ({
+            group: [g],
+            message: "executor runs in the browser.",
+          })),
         },
       ],
       "no-restricted-globals": ["error", ...NETWORK_GLOBALS],
@@ -232,39 +263,25 @@ export default tseslint.config(
 
   boundary(
     ["packages/client-core/**/*.ts"],
-    [
-      {
-        group: ["@superguide/*", "!@superguide/contract/public", "!@superguide/executor"],
-        message: "client-core may import only contract/public and executor.",
-      },
-    ],
+    [INTERNAL_PACKAGES.contractPublic, INTERNAL_PACKAGES.executor],
+    "client-core may import only contract/public and executor.",
   ),
 
   boundary(
     ["packages/widget-ui/**/*.ts", "packages/widget-ui/**/*.tsx"],
-    [
-      {
-        group: ["@superguide/*", "!@superguide/contract/public", "!@superguide/client-core"],
-        message: "widget-ui may import only contract/public and client-core.",
-      },
-    ],
+    [INTERNAL_PACKAGES.contractPublic, INTERNAL_PACKAGES.clientCore],
+    "widget-ui may import only contract/public and client-core.",
   ),
 
   boundary(
     ["apps/control-plane/**/*.ts"],
     [
-      {
-        group: [
-          "@superguide/*",
-          "!@superguide/contract/public",
-          "!@superguide/contract/internal",
-          "!@superguide/policy",
-          "!@superguide/procedures",
-        ],
-        message:
-          "control-plane may import only contract, policy, and procedures. Browser packages are out of bounds.",
-      },
+      INTERNAL_PACKAGES.contractPublic,
+      INTERNAL_PACKAGES.contractInternal,
+      INTERNAL_PACKAGES.policy,
+      INTERNAL_PACKAGES.procedures,
     ],
+    "control-plane may import only contract, policy, and procedures. Browser packages are out of bounds.",
   ),
 
   {

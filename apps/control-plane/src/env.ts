@@ -28,7 +28,7 @@ export const environmentSchema = z.object({
   SG_WEBHOOK_SIGNING_KEY: base64Key(32),
   SG_ENABLE_GROUNDED_ACTIONS: z.stringbool().default(false),
   SG_STEP_BUDGET: z.coerce.number().int().positive().max(64).default(12),
-  SG_LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+  SG_LOG_LEVEL: z.enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

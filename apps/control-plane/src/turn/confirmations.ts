@@ -1,0 +1,67 @@
+import type { ConfirmationDecision } from "@superguide/contract/public";
+
+interface PendingConfirmation {
+  conversationId: string;
+  paramsHash: string;
+  settle: (decision: ConfirmationDecision) => void;
+  timer: NodeJS.Timeout;
+}
+
+export type ConfirmationOutcome =
+  | { status: "accepted" }
+  | { status: "unknown_call" }
+  | { status: "params_mismatch" };
+
+export class ConfirmationRegistry {
+  readonly #pending = new Map<string, PendingConfirmation>();
+
+  request(
+    toolCallId: string,
+    conversationId: string,
+    paramsHash: string,
+    timeoutMs: number,
+  ): Promise<ConfirmationDecision> {
+    return new Promise<ConfirmationDecision>((resolve) => {
+      const settle = (decision: ConfirmationDecision): void => {
+        const entry = this.#pending.get(toolCallId);
+        if (entry === undefined) return;
+        clearTimeout(entry.timer);
+        this.#pending.delete(toolCallId);
+        resolve(decision);
+      };
+
+      const timer = setTimeout(() => {
+        settle("timeout");
+      }, timeoutMs);
+      timer.unref();
+
+      this.#pending.set(toolCallId, { conversationId, paramsHash, settle, timer });
+    });
+  }
+
+  // The server recomputes paramsHash from the action it proposed, so an approval is bound to
+  // one action's exact parameters. Nothing in this registry can outlive a single decision.
+  decide(
+    conversationId: string,
+    toolCallId: string,
+    paramsHash: string,
+    decision: ConfirmationDecision,
+  ): ConfirmationOutcome {
+    const entry = this.#pending.get(toolCallId);
+    if (entry === undefined || entry.conversationId !== conversationId) {
+      return { status: "unknown_call" };
+    }
+    if (entry.paramsHash !== paramsHash) return { status: "params_mismatch" };
+    entry.settle(decision);
+    return { status: "accepted" };
+  }
+
+  abandonAll(decision: ConfirmationDecision): number {
+    let count = 0;
+    for (const entry of [...this.#pending.values()]) {
+      entry.settle(decision);
+      count += 1;
+    }
+    return count;
+  }
+}
