@@ -109,9 +109,10 @@ export function boot(surfaces: BootSurfaces, configuration: BootConfiguration): 
     currentDigest: () => observer.observe(surfaces.document, {}),
     currentUrl: () => navigator.currentUrl(),
     onLog: (message, detail) => {
-      surfaces.window.dispatchEvent(
-        new CustomEvent("sg:log", { detail: { message, detail } }),
-      );
+      surfaces.window.dispatchEvent(new CustomEvent("sg:log", { detail: { message, detail } }));
+    },
+    onNotify: (name, detail) => {
+      surfaces.document.dispatchEvent(new CustomEvent(`sg:${name}`, { detail }));
     },
   });
 
@@ -163,6 +164,14 @@ export function boot(surfaces: BootSurfaces, configuration: BootConfiguration): 
         const navigate = args[0];
         if (typeof navigate === "function") {
           customNavigate = navigate as (url: string) => void;
+        }
+        return;
+      }
+      case "ask": {
+        const text = args[0];
+        if (typeof text === "string" && text.trim().length > 0) {
+          widget.open();
+          void client.send(text);
         }
         return;
       }

@@ -42,6 +42,19 @@ export interface ClientOptions {
   currentDigest: () => PageDigest | null;
   currentUrl: () => string;
   onLog?: (message: string, detail?: unknown) => void;
+  // The host page cannot see inside a closed shadow root, so lifecycle is announced as
+  // sg: events it can listen for. Content stays inside the widget.
+  onNotify?: (name: string, detail: Record<string, unknown>) => void;
+}
+
+export const SESSION_NAMESPACE = "session";
+export const CONVERSATION_NAMESPACE = "conversation";
+
+interface StoredSession {
+  token: string;
+  expiresAt: string;
+  tier: string;
+  scopes: string[];
 }
 
 function emptyState(): ClientState {
@@ -65,6 +78,7 @@ export class SuperGuideClient {
   readonly #stream: ConversationStreamClient;
   readonly #listeners = new Set<StateListener>();
   #state: ClientState = emptyState();
+  #queuedMessage: string | null = null;
 
   constructor(options: ClientOptions) {
     this.#options = options;
@@ -109,17 +123,46 @@ export class SuperGuideClient {
     for (const listener of [...this.#listeners]) listener(this.#state);
   }
 
+  // A navigation destroys the page but not the work. The session and the conversation are kept
+  // so the same end user comes back after a page load and an owed result can still be delivered.
+  #restoreSession(): boolean {
+    const stored = this.#options.storage.read<StoredSession>(SESSION_NAMESPACE, "current");
+    if (stored === null) return false;
+    if (Date.parse(stored.expiresAt) <= Date.now()) return false;
+    this.#options.transport.setSessionToken(stored.token);
+    return true;
+  }
+
   async start(): Promise<void> {
     this.#patch({ status: "opening" });
 
-    const session = await this.#options.transport.openSession();
-    if (!session.ok) {
-      // The widget fails closed: a control plane outage leaves the host page untouched.
-      this.#options.onLog?.("session could not be opened", session);
-      this.#patch({ status: "unavailable" });
-      return;
+    if (!this.#restoreSession()) {
+      const session = await this.#options.transport.openSession();
+      if (!session.ok) {
+        // The widget fails closed: a control plane outage leaves the host page untouched.
+        this.#options.onLog?.("session could not be opened", session);
+        this.#patch({ status: "unavailable" });
+        return;
+      }
+      this.#options.transport.setSessionToken(session.value.sessionToken);
+      this.#options.storage.write(
+        SESSION_NAMESPACE,
+        "current",
+        {
+          token: session.value.sessionToken,
+          expiresAt: session.value.expiresAt,
+          tier: session.value.tier,
+          scopes: session.value.scopes,
+        },
+        Math.max(0, Date.parse(session.value.expiresAt) - Date.now()),
+      );
     }
-    this.#options.transport.setSessionToken(session.value.sessionToken);
+
+    const carried = this.#options.storage.read<string>(CONVERSATION_NAMESPACE, "current");
+    if (carried !== null) {
+      this.#patch({ conversationId: carried });
+      this.#stream.connect(carried);
+    }
 
     const config = await this.#options.transport.config();
     this.#patch({
@@ -138,6 +181,12 @@ export class SuperGuideClient {
 
     const replayed = await this.#dispatcher.replayPending(this.#options.currentDigest());
     if (replayed > 0) this.#options.onLog?.("replayed pending results", replayed);
+
+    const queued = this.#queuedMessage;
+    if (queued !== null) {
+      this.#queuedMessage = null;
+      await this.send(queued);
+    }
   }
 
   registerCapabilities(definitions: readonly CapabilityDefinition[]): void {
@@ -154,10 +203,27 @@ export class SuperGuideClient {
       return false;
     }
     this.#options.transport.setSessionToken(result.value.sessionToken);
+    this.#options.storage.write(
+      SESSION_NAMESPACE,
+      "current",
+      {
+        token: result.value.sessionToken,
+        expiresAt: result.value.expiresAt,
+        tier: result.value.tier,
+        scopes: result.value.scopes,
+      },
+      Math.max(0, Date.parse(result.value.expiresAt) - Date.now()),
+    );
     return true;
   }
 
+  // A host page may ask before the session has opened. Holding the message is the difference
+  // between a request that is answered late and one that vanishes.
   async send(message: string): Promise<void> {
+    if (this.#state.status === "opening" || this.#state.status === "idle") {
+      this.#queuedMessage = message;
+      return;
+    }
     if (this.#state.status !== "ready") return;
 
     this.#patch({ running: true, streamingText: "", notice: null, escalation: null });
@@ -181,6 +247,7 @@ export class SuperGuideClient {
     }
 
     const first = this.#state.conversationId === null;
+    this.#options.storage.write(CONVERSATION_NAMESPACE, "current", accepted.value.conversationId);
     this.#patch({ conversationId: accepted.value.conversationId, turnId: accepted.value.turnId });
     if (first) this.#stream.connect(accepted.value.conversationId);
   }
@@ -222,6 +289,7 @@ export class SuperGuideClient {
   }
 
   reset(): void {
+    this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
     this.#stream.stop();
     this.#state = { ...emptyState(), status: this.#state.status, config: this.#state.config };
     for (const listener of [...this.#listeners]) listener(this.#state);
@@ -231,6 +299,7 @@ export class SuperGuideClient {
     switch (event.event) {
       case "turn.started":
         this.#patch({ running: true, turnId: event.turnId, streamingText: "" });
+        this.#options.onNotify?.("turn-started", { turnId: event.turnId });
         return;
 
       case "message.delta":
@@ -244,6 +313,11 @@ export class SuperGuideClient {
           messages: [...this.#state.messages, event.message].sort((left, right) => left.seq - right.seq),
           streamingText: "",
         });
+        this.#options.onNotify?.("message", {
+          role: event.message.role,
+          seq: event.message.seq,
+          text: event.message.content.text,
+        });
         return;
       }
 
@@ -255,6 +329,10 @@ export class SuperGuideClient {
             preview: event.preview,
             expiresAt: event.expiresAt,
           },
+        });
+        this.#options.onNotify?.("confirm", {
+          toolCallId: event.toolCallId,
+          preview: event.preview,
         });
         return;
 
@@ -277,13 +355,20 @@ export class SuperGuideClient {
             referenceUrl: event.referenceUrl,
           },
         });
+        this.#options.onNotify?.("escalation", { reason: event.reason, message: event.userMessage });
         return;
 
       case "turn.finished":
         this.#patch({ running: false, turnId: null, streamingText: "" });
+        this.#options.onNotify?.("turn-finished", {
+          turnId: event.turnId,
+          resolutionState: event.resolutionState,
+          summary: event.summary,
+        });
         return;
 
       case "turn.failed":
+        this.#options.onNotify?.("turn-failed", { code: event.code });
         this.#patch({
           running: false,
           turnId: null,

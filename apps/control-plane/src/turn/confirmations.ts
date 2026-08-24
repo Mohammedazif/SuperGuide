@@ -1,10 +1,20 @@
-import type { ConfirmationDecision } from "@superguide/contract/public";
+import type { ConfirmationDecision, PolicyVerdict } from "@superguide/contract/public";
 
 interface PendingConfirmation {
   conversationId: string;
   paramsHash: string;
   settle: (decision: ConfirmationDecision) => void;
   timer: NodeJS.Timeout;
+  announcement: OutstandingConfirmation | null;
+}
+
+export interface OutstandingConfirmation {
+  turnId: string;
+  toolCallId: string;
+  paramsHash: string;
+  verdict: PolicyVerdict;
+  preview: string;
+  expiresAt: string;
 }
 
 export type ConfirmationOutcome =
@@ -20,6 +30,7 @@ export class ConfirmationRegistry {
     conversationId: string,
     paramsHash: string,
     timeoutMs: number,
+    announcement: OutstandingConfirmation | null = null,
   ): Promise<ConfirmationDecision> {
     return new Promise<ConfirmationDecision>((resolve) => {
       const settle = (decision: ConfirmationDecision): void => {
@@ -35,7 +46,7 @@ export class ConfirmationRegistry {
       }, timeoutMs);
       timer.unref();
 
-      this.#pending.set(toolCallId, { conversationId, paramsHash, settle, timer });
+      this.#pending.set(toolCallId, { conversationId, paramsHash, settle, timer, announcement });
     });
   }
 
@@ -54,6 +65,17 @@ export class ConfirmationRegistry {
     if (entry.paramsHash !== paramsHash) return { status: "params_mismatch" };
     entry.settle(decision);
     return { status: "accepted" };
+  }
+
+  // A confirmation asked for on an ephemeral channel would be lost to a client that attaches a
+  // moment later, and the person would never be asked. Outstanding requests are re-announced.
+  outstandingFor(conversationId: string): OutstandingConfirmation[] {
+    const found: OutstandingConfirmation[] = [];
+    for (const entry of this.#pending.values()) {
+      if (entry.conversationId !== conversationId) continue;
+      if (entry.announcement !== null) found.push(entry.announcement);
+    }
+    return found;
   }
 
   abandonAll(decision: ConfirmationDecision): number {

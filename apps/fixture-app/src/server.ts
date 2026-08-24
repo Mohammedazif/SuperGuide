@@ -9,18 +9,24 @@ import { z } from "zod";
 
 const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 
-const STRICT_CSP = [
-  "default-src 'none'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data:",
-  "connect-src 'self'",
-  "form-action 'none'",
-  "base-uri 'none'",
-  "frame-ancestors 'none'",
-].join("; ");
+// What a customer would actually write: no inline script, no eval, no relaxed style policy,
+// and their own agent endpoint allowed under connect-src. The widget needs nothing beyond this.
+function strictCsp(apiOrigin: string | null): string {
+  const connect = apiOrigin === null ? "'self'" : `'self' ${apiOrigin}`;
+  return [
+    "default-src 'none'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data:",
+    `connect-src ${connect}`,
+    "form-action 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
 
 export interface FixtureOptions {
+  widgetBundlePath?: string | null;
   widgetScriptUrl?: string | null;
   widgetProductId?: string | null;
   apiUrl?: string | null;
@@ -32,6 +38,60 @@ export interface FixtureApp {
   app: FastifyInstance;
   state: FixtureState;
   reset(): void;
+}
+
+function queryString(query: unknown, key: string): string | null {
+  if (typeof query !== "object" || query === null || !(key in query)) return null;
+  const value = (query as Record<string, unknown>)[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function cookieValue(header: string | string[] | undefined, name: string): string | null {
+  if (typeof header !== "string") return null;
+  for (const part of header.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
+// Test scaffolding: a real product has the script tag on every page it serves. Remembering the
+// pair lets a navigation keep the widget without threading query parameters through every link.
+interface WidgetWiring {
+  scriptUrl: string | null;
+  productId: string | null;
+  apiUrl: string | null;
+}
+
+function widgetWiring(
+  request: { query: unknown; headers: Record<string, string | string[] | undefined> },
+  reply: { header: (name: string, value: string) => unknown },
+  options: FixtureOptions,
+): WidgetWiring {
+  const fromQueryProduct = queryString(request.query, "sgProduct");
+  const fromQueryApi = queryString(request.query, "sgApi");
+
+  if (fromQueryProduct !== null && fromQueryApi !== null) {
+    reply.header(
+      "set-cookie",
+      `sg_fixture=${encodeURIComponent(`${fromQueryProduct}|${fromQueryApi}`)}; Path=/; SameSite=Lax`,
+    );
+    return { scriptUrl: "/widget.js", productId: fromQueryProduct, apiUrl: fromQueryApi };
+  }
+
+  const remembered = cookieValue(request.headers.cookie, "sg_fixture");
+  if (remembered !== null) {
+    const [productId, apiUrl] = remembered.split("|");
+    if (productId !== undefined && apiUrl !== undefined) {
+      return { scriptUrl: "/widget.js", productId, apiUrl };
+    }
+  }
+
+  return {
+    scriptUrl: options.widgetScriptUrl ?? null,
+    productId: options.widgetProductId ?? null,
+    apiUrl: options.apiUrl ?? null,
+  };
 }
 
 function variantFrom(query: unknown, headers: Record<string, string | string[] | undefined>): Variant {
@@ -56,13 +116,27 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
     });
   };
 
-  app.addHook("onSend", (_request, reply, payload, done) => {
-    if (options.strictCsp === true) reply.header("content-security-policy", STRICT_CSP);
+  app.addHook("onSend", (request, reply, payload, done) => {
+    if (options.strictCsp === true) {
+      const wiring = widgetWiring(request, { header: () => undefined }, options);
+      const origin = wiring.apiUrl === null ? null : new URL(wiring.apiUrl).origin;
+      reply.header("content-security-policy", strictCsp(origin));
+    }
     done(null, payload);
   });
 
   asset("app.css", "text/css; charset=utf-8");
   asset("app.js", "text/javascript; charset=utf-8");
+
+  const bundlePath = options.widgetBundlePath;
+  if (bundlePath !== undefined && bundlePath !== null) {
+    app.get("/widget.js", (_request, reply) => {
+      void reply
+        .header("content-type", "text/javascript; charset=utf-8")
+        .header("cache-control", "no-store")
+        .send(readFileSync(bundlePath, "utf8"));
+    });
+  }
 
   app.get("/openapi.json", (request, reply) => {
     const base = `${request.protocol}://${request.headers.host ?? request.hostname}`;
@@ -232,9 +306,14 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
         seats: [...state.seats.values()],
         invoices: [...state.invoices.values()],
         sso,
-        widgetScriptUrl: options.widgetScriptUrl ?? null,
-        widgetProductId: options.widgetProductId ?? null,
-        apiUrl: options.apiUrl ?? null,
+        ...(() => {
+          const wiring = widgetWiring(request, reply, options);
+          return {
+            widgetScriptUrl: wiring.scriptUrl,
+            widgetProductId: wiring.productId,
+            apiUrl: wiring.apiUrl,
+          };
+        })(),
       };
       return reply.header("content-type", "text/html; charset=utf-8").send(renderPage(model));
     });
@@ -262,9 +341,14 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
       seats: [...state.seats.values()],
       invoices: [...state.invoices.values()],
       sso,
-      widgetScriptUrl: options.widgetScriptUrl ?? null,
-      widgetProductId: options.widgetProductId ?? null,
-      apiUrl: options.apiUrl ?? null,
+      ...(() => {
+        const wiring = widgetWiring(request, reply, options);
+        return {
+          widgetScriptUrl: wiring.scriptUrl,
+          widgetProductId: wiring.productId,
+          apiUrl: wiring.apiUrl,
+        };
+      })(),
     };
     return reply
       .status(invoice === undefined ? 404 : 200)

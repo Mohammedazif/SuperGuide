@@ -1,4 +1,4 @@
-import type { SgEvent, SgEventName } from "@superguide/contract/public";
+import type { ExecutorAction, LadderLevel, SgEvent, SgEventName } from "@superguide/contract/public";
 import type { Database } from "../db/client.js";
 import { withProduct } from "../db/client.js";
 import { readJournalSince } from "../repository/journal.js";
@@ -13,8 +13,22 @@ export interface StreamSink {
   end(): void;
 }
 
+export interface ConversationLifecycle {
+  activeTurnId: string | null;
+  resolutionState: string;
+}
+
+export interface OutstandingCall {
+  turnId: string;
+  action: ExecutorAction;
+  ladderLevel: LadderLevel;
+}
+
 export interface ConversationStreamOptions {
   db: Database;
+  lifecycle?: () => Promise<ConversationLifecycle | null>;
+  outstandingCalls?: () => OutstandingCall[];
+  outstandingConfirmations?: () => SgEvent[];
   notifier: DurableNotifier;
   ephemeral: EphemeralBus;
   logger: AppLogger;
@@ -33,6 +47,7 @@ function frame(id: number | null, name: SgEventName, payload: SgEvent): string {
 export class ConversationStream {
   readonly #options: ConversationStreamOptions;
   #lastSentSeq: number;
+  #lastAssistantText = "";
   #draining = false;
   #drainRequested = false;
   #closed = false;
@@ -79,6 +94,58 @@ export class ConversationStream {
     this.#heartbeat.unref();
 
     await this.#drain();
+    this.#announceOutstandingCalls();
+    this.#announceOutstandingConfirmations();
+    await this.#announceSettledTurn();
+  }
+
+  #announceOutstandingCalls(): void {
+    const outstanding = this.#options.outstandingCalls;
+    if (outstanding === undefined || this.#isClosed()) return;
+
+    for (const call of outstanding()) {
+      this.#options.sink.write(
+        frame(null, "action.executing", {
+          event: "action.executing",
+          turnId: call.turnId,
+          action: call.action,
+          ladderLevel: call.ladderLevel,
+        }),
+      );
+    }
+  }
+
+  // An ephemeral turn.finished only reaches connections that were attached when it was
+  // published. A client that connects after a fast turn would otherwise wait forever, so the
+  // settled state is read from the database and announced once on connect.
+  #announceOutstandingConfirmations(): void {
+    const outstanding = this.#options.outstandingConfirmations;
+    if (outstanding === undefined || this.#isClosed()) return;
+    for (const event of outstanding()) {
+      this.#options.sink.write(frame(null, event.event, event));
+    }
+  }
+
+  async #announceSettledTurn(): Promise<void> {
+    const lifecycle = this.#options.lifecycle;
+    if (lifecycle === undefined || this.#isClosed()) return;
+
+    try {
+      const current = await lifecycle();
+      if (current === null || current.activeTurnId !== null) return;
+      if (current.resolutionState === "in_progress") return;
+
+      this.#options.sink.write(
+        frame(null, "turn.finished", {
+          event: "turn.finished",
+          turnId: "00000000-0000-4000-8000-000000000000",
+          resolutionState: current.resolutionState as "resolved",
+          summary: this.#lastAssistantText,
+        }),
+      );
+    } catch (error) {
+      this.#options.logger.warn({ err: error }, "the settled turn state could not be read");
+    }
   }
 
   close(finalEvent?: { name: SgEventName; payload: SgEvent }): void {
@@ -121,6 +188,7 @@ export class ConversationStream {
           if (entry.seq <= this.#lastSentSeq) continue;
 
           if (entry.kind === "message") {
+            if (entry.message.role === "assistant") this.#lastAssistantText = entry.message.content.text;
             this.#options.sink.write(
               frame(entry.seq, "message.completed", {
                 event: "message.completed",

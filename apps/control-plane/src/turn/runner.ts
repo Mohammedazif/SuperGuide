@@ -45,13 +45,9 @@ export function createAgentTurnRunner(deps: TurnRunnerDependencies): TurnRunner 
     input: TurnStartInput,
     outcome: TurnExecutionOutcome,
   ): Promise<void> => {
+    // The turn itself writes what the person reads. The runner only records the outcome, so a
+    // completed turn does not leave two copies of the same closing message.
     await withProduct(deps.db, input.productId, async (tx) => {
-      await appendMessage(tx, {
-        conversationId: input.conversationId,
-        productId: input.productId,
-        role: "assistant",
-        text: outcome.summary,
-      });
       await setResolution(
         tx,
         input.conversationId,

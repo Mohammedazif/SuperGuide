@@ -53,8 +53,12 @@ export class Transport {
     };
   }
 
+  // The product id also travels as a query parameter, because a CORS preflight carries no
+  // custom headers and the origin check must still be able to resolve the product.
   url(path: string): string {
-    return new URL(path, this.#options.apiUrl).toString();
+    const resolved = new URL(path, this.#options.apiUrl);
+    resolved.searchParams.set("productId", this.#options.productId);
+    return resolved.toString();
   }
 
   get fetch(): typeof fetch {

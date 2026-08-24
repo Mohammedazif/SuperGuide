@@ -55,9 +55,9 @@ export function mountWidget(options: MountOptions): MountedWidget {
       h(Widget, {
         client: options.client,
         title: options.title ?? "Get this done",
-        initiallyOpen: open,
+        open,
         onOpenChange: (next: boolean) => {
-          currentlyOpen = next;
+          draw(next);
         },
       }),
       container,

@@ -15,6 +15,10 @@ export interface PageModel {
   apiUrl: string | null;
 }
 
+export function linkSuffix(model: PageModel): string {
+  return model.variant === "b" ? "?variant=b" : "";
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -234,9 +238,10 @@ const NAV = [
 ];
 
 function chrome(model: PageModel, body: string): string {
+  const suffix = linkSuffix(model);
   const nav = NAV.map(
     (item) =>
-      `<a href="${item.href}${model.variant === "b" ? "?variant=b" : ""}"${item.href === model.path ? ' aria-current="page"' : ""}>${item.label}</a>`,
+      `<a href="${item.href}${suffix}"${item.href === model.path ? ' aria-current="page"' : ""}>${item.label}</a>`,
   ).join("\n");
 
   const widget =

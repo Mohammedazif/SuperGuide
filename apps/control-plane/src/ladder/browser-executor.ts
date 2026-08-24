@@ -29,6 +29,12 @@ export async function executeInBrowser(
     return failedResult("not_a_browser_action", "this action does not run in the browser");
   }
 
+  const announcement = {
+    turnId: context.turnId,
+    action: executorAction,
+    ladderLevel: ladderLevelForActionType(action.type),
+  };
+
   const settled = options.pendingCalls.register(
     action.toolCallId,
     context.conversationId,
@@ -39,13 +45,12 @@ export async function executeInBrowser(
       digest: null,
       url: "",
     }),
+    announcement,
   );
 
   options.ephemeral.publish(context.conversationId, {
     event: "action.executing",
-    turnId: context.turnId,
-    action: executorAction,
-    ladderLevel: ladderLevelForActionType(action.type),
+    ...announcement,
   });
 
   const payload = await settled;

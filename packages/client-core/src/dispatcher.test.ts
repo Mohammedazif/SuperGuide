@@ -112,7 +112,7 @@ describe("durable tool dispatch", () => {
 
     dispatcher.reportInterruptedByNavigation();
 
-    const sent = requests.filter((request) => request.url.endsWith("/v1/tool-result"));
+    const sent = requests.filter((request) => request.url.includes("/v1/tool-result"));
     expect(sent).toHaveLength(1);
     expect(sent[0]?.keepalive).toBe(true);
     const body = sent[0]?.body as { result: { error: { code: string } } };
@@ -177,7 +177,7 @@ describe("durable tool dispatch", () => {
     await dispatcher.dispatch(CONVERSATION, action());
 
     expect(execute).toHaveBeenCalledTimes(1);
-    expect(requests.filter((request) => request.url.endsWith("/v1/tool-result"))).toHaveLength(1);
+    expect(requests.filter((request) => request.url.includes("/v1/tool-result"))).toHaveLength(1);
   });
 
   it("forgets a delivered call once its retention window passes", async () => {

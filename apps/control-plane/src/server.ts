@@ -217,6 +217,10 @@ export function buildServer(deps: ServerDependencies): AppServer {
     };
   };
 
+  // Explicit so a preflight is routed rather than falling through to the not-found handler.
+  app.options("/v1/*", (_request, reply) => reply.status(204).send());
+  app.options("/v1", (_request, reply) => reply.status(204).send());
+
   app.get("/health", () => ({ status: "ok" }));
 
   app.get("/ready", async (_request, reply) => {
@@ -413,6 +417,18 @@ export function buildServer(deps: ServerDependencies): AppServer {
       productId: product.id,
       conversationId,
       lastEventId,
+      outstandingCalls: () => deps.pendingCalls.outstandingFor(conversationId),
+      outstandingConfirmations: () =>
+        deps.confirmations
+          .outstandingFor(conversationId)
+          .map((entry) => ({ event: "action.confirm" as const, ...entry })),
+      lifecycle: () =>
+        withProduct(deps.db, product.id, async (tx) => {
+          const current = await findConversation(tx, conversationId);
+          return current === null
+            ? null
+            : { activeTurnId: current.activeTurnId, resolutionState: current.resolutionState };
+        }),
       sink: {
         write: (chunk) => {
           if (!reply.raw.writableEnded) reply.raw.write(chunk);

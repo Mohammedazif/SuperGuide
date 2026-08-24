@@ -5,8 +5,10 @@ import type { ClientState, SuperGuideClient } from "@superguide/client-core";
 export interface WidgetProps {
   client: SuperGuideClient;
   title: string;
-  initiallyOpen: boolean;
-  onOpenChange?: (open: boolean) => void;
+  // Controlled by the mount, so the open and close commands work on a widget that is already
+  // on the page rather than only at first render.
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 function Confirmation(props: {
@@ -49,9 +51,10 @@ function Confirmation(props: {
 
 export function Widget(props: WidgetProps): JSX.Element | null {
   const [state, setState] = useState<ClientState>(props.client.state);
-  const [open, setOpen] = useState(props.initiallyOpen);
   const [draft, setDraft] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
+  const open = props.open;
+  const setOpen = props.onOpenChange;
 
   useEffect(() => props.client.subscribe(setState), [props.client]);
 
@@ -59,10 +62,6 @@ export function Widget(props: WidgetProps): JSX.Element | null {
     const log = logRef.current;
     if (log !== null) log.scrollTop = log.scrollHeight;
   }, [state.messages.length, state.streamingText]);
-
-  useEffect(() => {
-    props.onOpenChange?.(open);
-  }, [open, props]);
 
   if (state.status === "unavailable") return null;
 

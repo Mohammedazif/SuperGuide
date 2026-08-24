@@ -99,14 +99,15 @@ export class ConversationStreamClient {
     const controller = new AbortController();
     this.#controller = controller;
 
-    const url = `${this.#transport.url("/v1/stream")}?conversationId=${encodeURIComponent(conversationId)}`;
+    const url = new URL(this.#transport.url("/v1/stream"));
+    url.searchParams.set("conversationId", conversationId);
     const headers = this.#transport.headers(
       this.#lastEventId > 0 ? { "last-event-id": String(this.#lastEventId) } : {},
     );
 
     let response: Response;
     try {
-      response = await this.#transport.fetch(url, {
+      response = await this.#transport.fetch(url.toString(), {
         headers,
         signal: controller.signal,
         cache: "no-store",

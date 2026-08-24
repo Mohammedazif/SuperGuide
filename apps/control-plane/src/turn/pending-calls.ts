@@ -1,4 +1,4 @@
-import type { ToolResultPayload } from "@superguide/contract/public";
+import type { ExecutorAction, LadderLevel, ToolResultPayload } from "@superguide/contract/public";
 
 export type DeliveryOutcome = "accepted" | "duplicate" | "unknown_call";
 
@@ -6,6 +6,13 @@ interface PendingEntry {
   conversationId: string;
   settle: (payload: ToolResultPayload) => void;
   timer: NodeJS.Timeout;
+  announcement: InFlightCall | null;
+}
+
+export interface InFlightCall {
+  turnId: string;
+  action: ExecutorAction;
+  ladderLevel: LadderLevel;
 }
 
 export class PendingCalls {
@@ -22,6 +29,7 @@ export class PendingCalls {
     conversationId: string,
     timeoutMs: number,
     onTimeout: () => ToolResultPayload,
+    announcement: InFlightCall | null = null,
   ): Promise<ToolResultPayload> {
     return new Promise<ToolResultPayload>((resolve) => {
       const settle = (payload: ToolResultPayload): void => {
@@ -38,7 +46,7 @@ export class PendingCalls {
       }, timeoutMs);
       timer.unref();
 
-      this.#pending.set(toolCallId, { conversationId, settle, timer });
+      this.#pending.set(toolCallId, { conversationId, settle, timer, announcement });
     });
   }
 
@@ -61,6 +69,18 @@ export class PendingCalls {
 
   isInFlight(toolCallId: string): boolean {
     return this.#pending.has(toolCallId);
+  }
+
+  // A dispatch is announced on an ephemeral channel, which only reaches connections attached at
+  // that moment. A client that attaches a moment later asks what is still outstanding, so an
+  // action cannot be lost to that race.
+  outstandingFor(conversationId: string): InFlightCall[] {
+    const found: InFlightCall[] = [];
+    for (const entry of this.#pending.values()) {
+      if (entry.conversationId !== conversationId) continue;
+      if (entry.announcement !== null) found.push(entry.announcement);
+    }
+    return found;
   }
 
   abandonConversation(conversationId: string, payload: ToolResultPayload): number {

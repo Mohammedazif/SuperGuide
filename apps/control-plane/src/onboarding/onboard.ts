@@ -4,6 +4,7 @@ import type { Transaction } from "../db/client.js";
 import { product as productTable, tool as toolTable } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ingestOpenApi } from "../tools/ingest-openapi.js";
+import { stableStringify } from "../model/stable-json.js";
 
 export interface OnboardInput {
   productId: string;
@@ -102,7 +103,7 @@ export async function onboardProduct(
 
     const changed =
       found.riskClass !== discovered.record.riskClass ||
-      JSON.stringify(found.definition) !== JSON.stringify(discovered.record.definition);
+      stableStringify(found.definition) !== stableStringify(discovered.record.definition);
 
     await tx
       .update(toolTable)

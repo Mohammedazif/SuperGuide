@@ -343,11 +343,9 @@ export async function runTurn(
 
   for (let stepIndex = 0; stepIndex < deps.env.SG_STEP_BUDGET; stepIndex += 1) {
     if (context.signal.aborted) {
-      return {
-        resolutionState: "cancelled",
-        summary: "This was stopped before it finished. Nothing further was attempted.",
-        closeConversation: true,
-      };
+      const stopped = "This was stopped before it finished. Nothing further was attempted.";
+      await say(deps, context.productId, context.conversationId, stopped);
+      return { resolutionState: "cancelled", summary: stopped, closeConversation: true };
     }
 
     const planned = await plan({
@@ -542,22 +540,24 @@ export async function runTurn(
       const paramsHash = hashActionParameters(action);
       const expiresAt = new Date(Date.now() + CONFIRMATION_TIMEOUT_MS).toISOString();
 
-      const decisionPromise = deps.confirmations.request(
-        action.toolCallId,
-        context.conversationId,
-        paramsHash,
-        CONFIRMATION_TIMEOUT_MS,
-      );
-
-      deps.ephemeral.publish(context.conversationId, {
-        event: "action.confirm",
+      const announcement = {
         turnId: context.turnId,
         toolCallId: action.toolCallId,
         paramsHash,
         verdict,
         preview: verdict.preview,
         expiresAt,
-      });
+      };
+
+      const decisionPromise = deps.confirmations.request(
+        action.toolCallId,
+        context.conversationId,
+        paramsHash,
+        CONFIRMATION_TIMEOUT_MS,
+        announcement,
+      );
+
+      deps.ephemeral.publish(context.conversationId, { event: "action.confirm", ...announcement });
 
       const decision = await decisionPromise;
       if (decision !== "approved") {

@@ -3,6 +3,7 @@ import type { CapabilityDescriptor } from "@superguide/contract/public";
 import { toolRecordSchema, type ToolRecord } from "@superguide/contract/internal";
 import type { Transaction } from "../db/client.js";
 import { tool } from "../db/schema.js";
+import { stableStringify } from "../model/stable-json.js";
 
 export interface CapabilityRegistrationOutcome {
   registered: string[];
@@ -50,9 +51,11 @@ export async function registerCapabilities(
       continue;
     }
 
+    // jsonb does not preserve key order, so a plain stringify would report a change on every
+    // registration and keep a reviewed capability permanently disabled.
     const changed =
       found.riskClass !== descriptor.risk ||
-      JSON.stringify(found.definition) !== JSON.stringify(definition);
+      stableStringify(found.definition) !== stableStringify(definition);
 
     await tx
       .update(tool)
