@@ -22,6 +22,7 @@ jobs:
       - run: pnpm check:forbidden
       - run: pnpm check:bundle-boundary
       - run: pnpm test:unit
+      - run: pnpm test:unit:coverage
 
   database:
     runs-on: ubuntu-latest

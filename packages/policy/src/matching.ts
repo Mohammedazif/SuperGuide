@@ -3,8 +3,12 @@ const STOPWORDS = new Set([
   "it", "of", "on", "or", "the", "to", "with", "when",
 ]);
 
+// Split on camel case as well as punctuation, so an operation id such as
+// updateBillingAddress matches a rule written as "any write to billing address".
 export function tokenise(value: string): string[] {
   return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length > 0 && !STOPWORDS.has(token));

@@ -12,11 +12,9 @@ import { buildServer } from "./server.js";
 import { createAgentTurnRunner } from "./turn/runner.js";
 import { createTurnExecutor } from "./turn/loop.js";
 import { AnthropicModelClient } from "./model/client.js";
-import {
-  NoKnowledgeRetriever,
-  NoProcedureMatcher,
-  NoTaskVerifier,
-} from "./turn/ports.js";
+import { NoKnowledgeRetriever } from "./turn/ports.js";
+import { ModelProcedureMatcher } from "./turn/procedure-matcher.js";
+import { ApiTaskVerifier } from "./turn/task-verifier.js";
 
 const SHUTDOWN_GRACE_MS = 15_000;
 
@@ -50,9 +48,9 @@ const turnRunner = createAgentTurnRunner({
     pendingCalls,
     confirmations,
     modelClient,
-    procedureMatcher: new NoProcedureMatcher(),
+    procedureMatcher: new ModelProcedureMatcher(modelClient, logger),
     knowledgeRetriever: new NoKnowledgeRetriever(),
-    taskVerifier: new NoTaskVerifier(),
+    taskVerifier: new ApiTaskVerifier(),
   }),
 });
 

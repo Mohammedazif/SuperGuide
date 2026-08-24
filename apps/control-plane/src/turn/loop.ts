@@ -48,22 +48,35 @@ export interface ProcedureSelection {
   successPredicates: unknown[];
 }
 
+export interface ProcedureMatchRequest {
+  candidates: readonly ProcedureCandidate[];
+  userMessage: string;
+  identity: Identity;
+  signal: AbortSignal;
+}
+
 export interface ProcedureMatcher {
-  match(
-    candidates: readonly ProcedureCandidate[],
-    userMessage: string,
-    signal: AbortSignal,
-  ): Promise<ProcedureSelection | null>;
+  match(request: ProcedureMatchRequest): Promise<ProcedureSelection | null>;
 }
 
 export interface KnowledgeRetriever {
   retrieve(productId: string, query: string, signal: AbortSignal): Promise<RetrievedChunk[]>;
 }
 
+export interface TaskVerificationContext {
+  productId: string;
+  signer: RequestSigner;
+  apiBaseUrl: string | null;
+  tools: readonly CompiledTool[];
+  parameters: Record<string, unknown>;
+  identity: Identity;
+  signal: AbortSignal;
+}
+
 export interface TaskVerifier {
   verify(
     selection: ProcedureSelection,
-    context: { productId: string; signer: RequestSigner; apiBaseUrl: string | null; signal: AbortSignal },
+    context: TaskVerificationContext,
   ): Promise<ExpectOutcome | null>;
 }
 
@@ -212,11 +225,12 @@ export async function runTurn(
   const groundedActionsEnabled =
     deps.env.SG_ENABLE_GROUNDED_ACTIONS && loaded.product.groundedActionsEnabled;
 
-  const selection = await deps.procedureMatcher.match(
-    loaded.procedures,
-    context.userMessage,
-    context.signal,
-  );
+  const selection = await deps.procedureMatcher.match({
+    candidates: loaded.procedures,
+    userMessage: context.userMessage,
+    identity: context.identity,
+    signal: context.signal,
+  });
   const knowledge = await deps.knowledgeRetriever.retrieve(
     context.productId,
     context.userMessage,
@@ -278,6 +292,7 @@ export async function runTurn(
 
   let observation: PageDigest | null = context.digest;
   let previousStepFailed = false;
+  let lastActionParameters: Record<string, unknown> = {};
   const signals: string[] = [];
 
   const identity: Identity = context.identity;
@@ -327,6 +342,9 @@ export async function runTurn(
               productId: context.productId,
               signer,
               apiBaseUrl: loaded.product.apiBaseUrl,
+              tools: compiled,
+              parameters: lastActionParameters,
+              identity,
               signal: context.signal,
             });
 
@@ -362,6 +380,9 @@ export async function runTurn(
     }
 
     const { action, tool } = planned.outcome;
+    if (action.type === "call_api" || action.type === "invoke_capability") {
+      lastActionParameters = { ...lastActionParameters, ...action.arguments };
+    }
 
     const verdict = evaluatePolicy({
       action,
