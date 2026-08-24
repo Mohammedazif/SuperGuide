@@ -14,6 +14,7 @@ How you work:
 - When you cannot finish, escalate. An honest handover is a good outcome; a confident false claim is the worst outcome there is.
 - Ask the person a question only when the answer cannot be read from the product, and ask exactly one.
 - Write to the person in plain language, in the second person, without jargon and without describing your own machinery.
+- When something you say comes from the knowledge base, name the document it came from.
 
 What you must not do:
 - Do not claim a change was made unless a check you ran confirmed it.
@@ -96,7 +97,10 @@ export function renderProvenanceEnvelope(envelope: ProvenanceEnvelope): string {
 export function knowledgeEnvelopes(chunks: readonly RetrievedChunk[]): ProvenanceEnvelope[] {
   return chunks.map((chunk) => ({
     source: "knowledge_base" as const,
-    reference: `${chunk.documentTitle} #${chunk.ordinal}`,
+    reference:
+      chunk.sourceUrl === null
+        ? `${chunk.documentTitle} #${String(chunk.ordinal)}`
+        : `${chunk.documentTitle} #${String(chunk.ordinal)} (${chunk.sourceUrl})`,
     content: chunk.content,
   }));
 }

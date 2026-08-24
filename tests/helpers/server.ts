@@ -10,6 +10,7 @@ import { StreamRegistry } from "../../apps/control-plane/src/events/stream.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
 import { RejectingIdentityVerifier } from "../../apps/control-plane/src/auth/identity-verifier.js";
+import { createRateLimiters } from "../../apps/control-plane/src/auth/rate-limit.js";
 import {
   createAgentTurnRunner,
   type TurnExecutor,
@@ -91,6 +92,7 @@ export async function startHarness(options: {
   execute?: TurnExecutor;
   env?: Record<string, string>;
   identityVerifier?: ServerDependencies["identityVerifier"];
+  rateLimiters?: ServerDependencies["rateLimiters"];
 } = {}): Promise<TestHarness> {
   const env = testEnvironment(options.env ?? {});
   const logger = pino({ level: "silent" });
@@ -130,6 +132,7 @@ export async function startHarness(options: {
     pendingCalls,
     confirmations,
     turnRunner,
+    rateLimiters: options.rateLimiters ?? createRateLimiters(),
     identityVerifier: options.identityVerifier ?? new RejectingIdentityVerifier(),
     clock: { now: () => new Date() },
     heartbeatIntervalMs: 1000,

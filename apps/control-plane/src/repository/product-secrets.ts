@@ -18,3 +18,15 @@ export async function loadProductSecret(
   if (row.apiCredentialsCiphertext === null || row.apiCredentialsIv === null) return null;
   return { ciphertext: row.apiCredentialsCiphertext, iv: row.apiCredentialsIv };
 }
+
+export async function loadSigningPublicKey(
+  tx: Transaction,
+  productId: string,
+): Promise<string | null> {
+  const rows = await tx
+    .select()
+    .from(productSecret)
+    .where(eq(productSecret.productId, productId))
+    .limit(1);
+  return rows[0]?.signingPublicKey ?? null;
+}

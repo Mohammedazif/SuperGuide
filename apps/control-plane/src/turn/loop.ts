@@ -32,6 +32,7 @@ import type { ExecutionResult } from "../ladder/types.js";
 import { evaluateWithRules } from "../expect/evaluate.js";
 import { redact } from "../secrets/redact.js";
 import { createRequestSigner, type RequestSigner } from "../secrets/credentials.js";
+import { assertCredentialPermitted } from "../secrets/forwarding-guard.js";
 import { loadProductSecret } from "../repository/product-secrets.js";
 import type { TurnExecutionContext, TurnExecutionOutcome } from "./runner.js";
 import { TurnFailure, describeError } from "../errors.js";
@@ -219,6 +220,10 @@ export async function runTurn(
     Buffer.from(deps.env.SG_SECRET_ENCRYPTION_KEY, "base64"),
     secret,
   );
+
+  // Untrusted page or knowledge content is always in this turn's context, so the guard refuses
+  // any credential that is not the product's own service account.
+  assertCredentialPermitted("product_service_account", true);
   const secretValues = signer.secretValues();
   const allowedFieldNames = loaded.product.redactionAllowlist.fieldNames;
 

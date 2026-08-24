@@ -1,18 +1,21 @@
 import { loadEnvironmentOrExit } from "./env.js";
 import { createLogger } from "./logging.js";
-import { createDatabase } from "./db/client.js";
+import { createDatabase, withProduct } from "./db/client.js";
 import { PostgresNotifier } from "./events/notifier.js";
 import { EphemeralBus } from "./events/ephemeral.js";
 import { StreamRegistry } from "./events/stream.js";
 import { PendingCalls } from "./turn/pending-calls.js";
 import { ConfirmationRegistry } from "./turn/confirmations.js";
-import { RejectingIdentityVerifier } from "./auth/identity-verifier.js";
+import { AsymmetricIdentityVerifier } from "./auth/jwt-verifier.js";
+import { createRateLimiters } from "./auth/rate-limit.js";
+import { loadSigningPublicKey } from "./repository/product-secrets.js";
 import { recoverInFlightTurns } from "./turn/recovery.js";
 import { buildServer } from "./server.js";
 import { createAgentTurnRunner } from "./turn/runner.js";
 import { createTurnExecutor } from "./turn/loop.js";
 import { AnthropicModelClient } from "./model/client.js";
-import { NoKnowledgeRetriever } from "./turn/ports.js";
+import { PgVectorRetriever } from "./knowledge/retrieve.js";
+import { HashingEmbeddingProvider } from "./knowledge/embedding.js";
 import { ModelProcedureMatcher } from "./turn/procedure-matcher.js";
 import { ApiTaskVerifier } from "./turn/task-verifier.js";
 
@@ -49,7 +52,11 @@ const turnRunner = createAgentTurnRunner({
     confirmations,
     modelClient,
     procedureMatcher: new ModelProcedureMatcher(modelClient, logger),
-    knowledgeRetriever: new NoKnowledgeRetriever(),
+    knowledgeRetriever: new PgVectorRetriever({
+      db,
+      embeddings: new HashingEmbeddingProvider(),
+      logger,
+    }),
     taskVerifier: new ApiTaskVerifier(),
   }),
 });
@@ -64,7 +71,15 @@ const app = buildServer({
   pendingCalls,
   confirmations,
   turnRunner,
-  identityVerifier: new RejectingIdentityVerifier(),
+  rateLimiters: createRateLimiters(),
+  identityVerifier: new AsymmetricIdentityVerifier({
+    logger,
+    keyFor: (product) =>
+      withProduct(db, product.id, async (tx) => ({
+        jwksUrl: product.jwksUrl,
+        spki: await loadSigningPublicKey(tx, product.id),
+      })),
+  }),
   clock: { now: () => new Date() },
 });
 

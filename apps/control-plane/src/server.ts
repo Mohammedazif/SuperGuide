@@ -25,6 +25,7 @@ import {
   type SessionClaims,
 } from "./auth/session-token.js";
 import type { IdentityVerifier } from "./auth/identity-verifier.js";
+import type { RateLimiters } from "./auth/rate-limit.js";
 import { findProduct } from "./repository/products.js";
 import { createAnonymousEndUser, upsertIdentifiedEndUser } from "./repository/end-users.js";
 import { registerCapabilities } from "./repository/tools.js";
@@ -57,6 +58,7 @@ export interface ServerDependencies {
   turnRunner: TurnRunner;
   identityVerifier: IdentityVerifier;
   streams: StreamRegistry;
+  rateLimiters: RateLimiters;
   clock: Clock;
   sessionTtlSeconds?: number;
   heartbeatIntervalMs?: number;
@@ -165,6 +167,17 @@ export function buildServer(deps: ServerDependencies): AppServer {
     }
   });
 
+  const enforceRate = (
+    limiter: RateLimiters[keyof RateLimiters],
+    key: string,
+    reply: { header: (name: string, value: string) => unknown },
+  ): void => {
+    const decision = limiter.take(key);
+    if (decision.allowed) return;
+    reply.header("retry-after", String(decision.retryAfterSeconds));
+    throw new ApiFailure("rate_limited");
+  };
+
   const requireSession = (request: SessionCarrier): SessionClaims => {
     const token = bearerFrom(request);
     if (token === null) throw new ApiFailure("session_invalid");
@@ -219,6 +232,8 @@ export function buildServer(deps: ServerDependencies): AppServer {
     const product = request.sgProduct;
     if (product === undefined) throw new ApiFailure("product_unknown");
 
+    enforceRate(deps.rateLimiters.session, `${product.id}:${request.ip}`, reply);
+
     const body = createSessionRequestSchema.safeParse(request.body);
     if (!body.success) throw new ApiFailure("payload_invalid");
     if (body.data.productId !== product.id) throw new ApiFailure("payload_invalid");
@@ -242,6 +257,8 @@ export function buildServer(deps: ServerDependencies): AppServer {
     const product = request.sgProduct;
     if (product === undefined) throw new ApiFailure("product_unknown");
     requireSession(request);
+
+    enforceRate(deps.rateLimiters.session, `${product.id}:${request.ip}`, reply);
 
     const body = identifyRequestSchema.safeParse(request.body);
     if (!body.success) throw new ApiFailure("payload_invalid");
@@ -313,6 +330,8 @@ export function buildServer(deps: ServerDependencies): AppServer {
     const product = request.sgProduct;
     if (product === undefined) throw new ApiFailure("product_unknown");
     const claims = requireSession(request);
+
+    enforceRate(deps.rateLimiters.chat, `${product.id}:${claims.endUserId}`, reply);
 
     const body = chatRequestSchema.safeParse(request.body);
     if (!body.success) throw new ApiFailure("payload_invalid");
@@ -420,6 +439,8 @@ export function buildServer(deps: ServerDependencies): AppServer {
     const product = request.sgProduct;
     if (product === undefined) throw new ApiFailure("product_unknown");
     const claims = requireSession(request);
+
+    enforceRate(deps.rateLimiters.toolResult, `${product.id}:${claims.endUserId}`, reply);
 
     const body = toolResultRequestSchema.safeParse(request.body);
     if (!body.success) throw new ApiFailure("payload_invalid");
