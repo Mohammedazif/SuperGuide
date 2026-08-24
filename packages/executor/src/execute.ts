@@ -92,10 +92,18 @@ function fillRouteTemplate(
 }
 
 export class ActionExecutor {
-  readonly #options: ExecutorOptions;
+  #options: ExecutorOptions;
 
   constructor(options: ExecutorOptions) {
     this.#options = options;
+  }
+
+  setGroundedActionsEnabled(enabled: boolean): void {
+    this.#options = { ...this.#options, groundedActionsEnabled: enabled };
+  }
+
+  setObserveOptions(observeOptions: ObserveOptions): void {
+    this.#options = { ...this.#options, observeOptions };
   }
 
   digest(): PageDigest {

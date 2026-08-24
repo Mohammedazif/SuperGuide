@@ -7,6 +7,7 @@ import { readJournalSince } from "../../apps/control-plane/src/repository/journa
 import { createTurnExecutor } from "../../apps/control-plane/src/turn/loop.js";
 import { ScriptedModelClient } from "../../apps/control-plane/src/model/scripted-client.js";
 import { NoKnowledgeRetriever, NoProcedureMatcher, NoTaskVerifier } from "../../apps/control-plane/src/turn/ports.js";
+import { NoEscalationSink } from "../../apps/control-plane/src/escalation/sink.js";
 import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
@@ -125,6 +126,7 @@ describe("grounded actions behind the flag", () => {
         procedureMatcher: new NoProcedureMatcher(),
         knowledgeRetriever: new NoKnowledgeRetriever(),
         taskVerifier: new NoTaskVerifier(),
+      escalationSink: new NoEscalationSink(),
       })({
         productId,
         conversationId,
@@ -218,6 +220,7 @@ describe("grounded actions behind the flag", () => {
       procedureMatcher: new NoProcedureMatcher(),
       knowledgeRetriever: new NoKnowledgeRetriever(),
       taskVerifier: new NoTaskVerifier(),
+      escalationSink: new NoEscalationSink(),
     })({
       productId,
       conversationId,

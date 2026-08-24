@@ -36,6 +36,7 @@ import { assertCredentialPermitted } from "../secrets/forwarding-guard.js";
 import { loadProductSecret } from "../repository/product-secrets.js";
 import type { TurnExecutionContext, TurnExecutionOutcome } from "./runner.js";
 import { TurnFailure, describeError } from "../errors.js";
+import type { EscalationReason } from "@superguide/contract/internal";
 
 const CONFIRMATION_TIMEOUT_MS = 120_000;
 
@@ -81,6 +82,19 @@ export interface TaskVerifier {
   ): Promise<ExpectOutcome | null>;
 }
 
+export interface EscalationContext {
+  productId: string;
+  conversationId: string;
+  turnId: string;
+  reason: EscalationReason;
+  detail: string;
+  identity: Identity;
+}
+
+export interface EscalationSink {
+  publish(context: EscalationContext): Promise<void>;
+}
+
 export interface LoopDependencies {
   env: Environment;
   logger: AppLogger;
@@ -92,6 +106,7 @@ export interface LoopDependencies {
   procedureMatcher: ProcedureMatcher;
   knowledgeRetriever: KnowledgeRetriever;
   taskVerifier: TaskVerifier;
+  escalationSink: EscalationSink;
   fetchImplementation?: typeof fetch;
 }
 
@@ -295,12 +310,36 @@ export async function runTurn(
   openingBlocks.push(`The person says:\n${context.userMessage}`);
   messages.push({ role: "user", content: openingBlocks.join("\n\n") });
 
+  const identity: Identity = context.identity;
+
+  const announceEscalation = async (reason: EscalationReason, detail: string): Promise<void> => {
+    deps.ephemeral.publish(context.conversationId, {
+      event: "escalation.created",
+      turnId: context.turnId,
+      conversationId: context.conversationId,
+      reason,
+      userMessage: detail,
+      referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}?productId=${context.productId}`,
+    });
+
+    try {
+      await deps.escalationSink.publish({
+        productId: context.productId,
+        conversationId: context.conversationId,
+        turnId: context.turnId,
+        reason,
+        detail,
+        identity,
+      });
+    } catch (error) {
+      deps.logger.error({ err: error }, "an escalation could not be handed over");
+    }
+  };
+
   let observation: PageDigest | null = context.digest;
   let previousStepFailed = false;
   let lastActionParameters: Record<string, unknown> = {};
   const signals: string[] = [];
-
-  const identity: Identity = context.identity;
 
   for (let stepIndex = 0; stepIndex < deps.env.SG_STEP_BUDGET; stepIndex += 1) {
     if (context.signal.aborted) {
@@ -361,14 +400,7 @@ export async function runTurn(
           context.conversationId,
           escalationText("the final check did not confirm the change", detail),
         );
-        deps.ephemeral.publish(context.conversationId, {
-          event: "escalation.created",
-          turnId: context.turnId,
-          conversationId: context.conversationId,
-          reason: "expect_unsatisfied",
-          userMessage: detail,
-          referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}`,
-        });
+        await announceEscalation("expect_unsatisfied", detail);
         return {
           resolutionState: "escalated",
           summary: detail,
@@ -434,14 +466,7 @@ export async function runTurn(
         context.conversationId,
         escalationText(verdict.reason, detail),
       );
-      deps.ephemeral.publish(context.conversationId, {
-        event: "escalation.created",
-        turnId: context.turnId,
-        conversationId: context.conversationId,
-        reason: "policy_block",
-        userMessage: detail,
-        referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}`,
-      });
+      await announceEscalation("policy_block", detail);
       return { resolutionState: "escalated", summary: detail, closeConversation: true };
     }
 
@@ -509,14 +534,7 @@ export async function runTurn(
         context.conversationId,
         escalationText(action.reason, action.summary),
       );
-      deps.ephemeral.publish(context.conversationId, {
-        event: "escalation.created",
-        turnId: context.turnId,
-        conversationId: context.conversationId,
-        reason: action.reason,
-        userMessage: action.summary,
-        referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}`,
-      });
+      await announceEscalation("agent_cannot_complete", `${action.reason}: ${action.summary}`);
       return { resolutionState: "escalated", summary: action.summary, closeConversation: true };
     }
 
@@ -574,14 +592,7 @@ export async function runTurn(
             ? "You did not approve the step it wanted to take, so nothing was changed."
             : "The confirmation was not answered in time, so nothing was changed.";
         await say(deps, context.productId, context.conversationId, escalationText(decision, detail));
-        deps.ephemeral.publish(context.conversationId, {
-          event: "escalation.created",
-          turnId: context.turnId,
-          conversationId: context.conversationId,
-          reason: decision === "denied" ? "confirmation_denied" : "confirmation_timeout",
-          userMessage: detail,
-          referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}`,
-        });
+        await announceEscalation(decision === "denied" ? "confirmation_denied" : "confirmation_timeout", detail);
         return { resolutionState: "escalated", summary: detail, closeConversation: true };
       }
     }
@@ -685,14 +696,7 @@ export async function runTurn(
     context.conversationId,
     escalationText("step_budget_exhausted", detail),
   );
-  deps.ephemeral.publish(context.conversationId, {
-    event: "escalation.created",
-    turnId: context.turnId,
-    conversationId: context.conversationId,
-    reason: "step_budget_exhausted",
-    userMessage: detail,
-    referenceUrl: `${deps.env.SG_PUBLIC_ORIGIN}/internal/conversations/${context.conversationId}`,
-  });
+  await announceEscalation("step_budget_exhausted", detail);
   return { resolutionState: "escalated", summary: detail, closeConversation: true };
 }
 

@@ -42,6 +42,8 @@ export const product = pgTable(
     groundedActionsEnabled: boolean("grounded_actions_enabled").notNull(),
     retentionDays: integer("retention_days").notNull(),
     apiBaseUrl: text("api_base_url"),
+    escalationWebhookUrl: text("escalation_webhook_url"),
+    escalationEmail: text("escalation_email"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },

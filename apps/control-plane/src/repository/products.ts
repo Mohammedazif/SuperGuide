@@ -32,6 +32,8 @@ export async function findProduct(tx: Transaction, productId: string): Promise<P
     groundedActionsEnabled: row.groundedActionsEnabled,
     retentionDays: row.retentionDays,
     apiBaseUrl: row.apiBaseUrl,
+    escalationWebhookUrl: row.escalationWebhookUrl,
+    escalationEmail: row.escalationEmail,
     createdAt: row.createdAt.toISOString(),
     deletedAt: row.deletedAt === null ? null : row.deletedAt.toISOString(),
   });

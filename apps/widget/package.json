@@ -14,8 +14,9 @@
   },
   "dependencies": {
     "@superguide/client-core": "workspace:*",
-    "@superguide/contract": "workspace:*",
-    "@superguide/widget-ui": "workspace:*"
+    "@superguide/widget-ui": "workspace:*",
+    "@superguide/observer": "workspace:*",
+    "@superguide/executor": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.5.1"

@@ -42,6 +42,7 @@ import type { EphemeralBus } from "./events/ephemeral.js";
 import type { PendingCalls } from "./turn/pending-calls.js";
 import type { ConfirmationRegistry } from "./turn/confirmations.js";
 import type { TurnRunner } from "./turn/types.js";
+import { registerConsoleRoutes } from "./console/routes.js";
 
 export interface Clock {
   now(): Date;
@@ -555,6 +556,12 @@ export function buildServer(deps: ServerDependencies): AppServer {
       return;
     }
     done();
+  });
+
+  registerConsoleRoutes(app, {
+    db: deps.db,
+    sessionKey,
+    now: () => deps.clock.now(),
   });
 
   app.setNotFoundHandler((_request, reply) => {

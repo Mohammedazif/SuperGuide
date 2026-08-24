@@ -18,6 +18,7 @@ import { PgVectorRetriever } from "./knowledge/retrieve.js";
 import { HashingEmbeddingProvider } from "./knowledge/embedding.js";
 import { ModelProcedureMatcher } from "./turn/procedure-matcher.js";
 import { ApiTaskVerifier } from "./turn/task-verifier.js";
+import { WebhookEscalationSink } from "./escalation/sink.js";
 
 const SHUTDOWN_GRACE_MS = 15_000;
 
@@ -58,6 +59,12 @@ const turnRunner = createAgentTurnRunner({
       logger,
     }),
     taskVerifier: new ApiTaskVerifier(),
+    escalationSink: new WebhookEscalationSink({
+      db,
+      logger,
+      signingKey: Buffer.from(env.SG_WEBHOOK_SIGNING_KEY, "base64"),
+      publicOrigin: env.SG_PUBLIC_ORIGIN,
+    }),
   }),
 });
 

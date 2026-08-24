@@ -5,6 +5,7 @@ import pg from "pg";
 import { createDatabase, withProduct, type DatabaseHandle } from "../../apps/control-plane/src/db/client.js";
 import { readJournalSince } from "../../apps/control-plane/src/repository/journal.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
+import { NoEscalationSink } from "../../apps/control-plane/src/escalation/sink.js";
 import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { createTurnExecutor, hashActionParameters } from "../../apps/control-plane/src/turn/loop.js";
@@ -235,6 +236,7 @@ describe("an anonymous session cannot write", () => {
       procedureMatcher: new NoProcedureMatcher(),
       knowledgeRetriever: new NoKnowledgeRetriever(),
       taskVerifier: new NoTaskVerifier(),
+      escalationSink: new NoEscalationSink(),
     });
 
     const outcome = await execute({

@@ -166,9 +166,12 @@ importers:
       '@superguide/client-core':
         specifier: workspace:*
         version: link:../../packages/client-core
-      '@superguide/contract':
+      '@superguide/executor':
         specifier: workspace:*
-        version: link:../../packages/contract
+        version: link:../../packages/executor
+      '@superguide/observer':
+        specifier: workspace:*
+        version: link:../../packages/observer
       '@superguide/widget-ui':
         specifier: workspace:*
         version: link:../../packages/widget-ui

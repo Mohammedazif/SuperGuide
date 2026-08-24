@@ -274,6 +274,39 @@ export default tseslint.config(
   ),
 
   boundary(
+    ["apps/widget/**/*.ts", "apps/widget/**/*.tsx"],
+    [
+      INTERNAL_PACKAGES.contractPublic,
+      INTERNAL_PACKAGES.observer,
+      INTERNAL_PACKAGES.executor,
+      INTERNAL_PACKAGES.clientCore,
+      INTERNAL_PACKAGES.widgetUi,
+    ],
+    "the widget bundle must never reach contract/internal or a server package.",
+  ),
+
+  boundary(
+    ["apps/console/**/*.ts", "apps/console/**/*.tsx"],
+    [
+      INTERNAL_PACKAGES.contractPublic,
+      INTERNAL_PACKAGES.contractInternal,
+      INTERNAL_PACKAGES.procedures,
+    ],
+    "the console may import contract and procedures only.",
+  ),
+
+  boundary(
+    ["eval/harness/**/*.ts"],
+    [
+      INTERNAL_PACKAGES.contractPublic,
+      INTERNAL_PACKAGES.contractInternal,
+      INTERNAL_PACKAGES.procedures,
+      INTERNAL_PACKAGES.policy,
+    ],
+    "the eval harness may import contract, procedures, and policy only.",
+  ),
+
+  boundary(
     ["apps/control-plane/**/*.ts"],
     [
       INTERNAL_PACKAGES.contractPublic,
@@ -310,7 +343,9 @@ export default tseslint.config(
 
   {
     files: ["tools/**/*.mjs", "tools/**/*.js", "*.config.js"],
-    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", Buffer: "readonly" },
+    },
     plugins: { superguide },
     rules: { "no-console": "off", "superguide/no-vendor-names": "error" },
   },

@@ -4,6 +4,7 @@ import { trajectoryStepSchema } from "./trajectory.js";
 
 export const escalationReasonSchema = z.enum([
   "policy_block",
+  "agent_cannot_complete",
   "confirmation_denied",
   "confirmation_timeout",
   "expect_unsatisfied",

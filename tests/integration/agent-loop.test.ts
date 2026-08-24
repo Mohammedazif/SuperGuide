@@ -9,6 +9,7 @@ import {
   NoProcedureMatcher,
   NoTaskVerifier,
 } from "../../apps/control-plane/src/turn/ports.js";
+import { NoEscalationSink } from "../../apps/control-plane/src/escalation/sink.js";
 import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
@@ -94,6 +95,7 @@ describe("the agent loop against the fixture application", () => {
       procedureMatcher: new NoProcedureMatcher(),
       knowledgeRetriever: new NoKnowledgeRetriever(),
       taskVerifier: new NoTaskVerifier(),
+      escalationSink: new NoEscalationSink(),
     });
 
     return { execute, confirmations, ephemeral, confirmed };

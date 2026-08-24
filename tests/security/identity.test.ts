@@ -72,6 +72,8 @@ async function loadProduct(productId: string, patch: Record<string, unknown>): P
       groundedActionsEnabled: found["grounded_actions_enabled"],
       retentionDays: found["retention_days"],
       apiBaseUrl: found["api_base_url"],
+      escalationWebhookUrl: found["escalation_webhook_url"],
+      escalationEmail: found["escalation_email"],
       createdAt: (found["created_at"] as Date).toISOString(),
       deletedAt: null,
     });

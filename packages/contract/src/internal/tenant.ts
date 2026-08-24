@@ -44,6 +44,8 @@ export const productSchema = z.object({
   groundedActionsEnabled: z.boolean(),
   retentionDays: z.int().positive(),
   apiBaseUrl: z.url().nullable(),
+  escalationWebhookUrl: z.url().nullable(),
+  escalationEmail: z.email().nullable(),
   createdAt: isoTimestampSchema,
   deletedAt: isoTimestampSchema.nullable(),
 });

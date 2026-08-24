@@ -9,6 +9,7 @@ import { ScriptedModelClient } from "../../apps/control-plane/src/model/scripted
 import { ModelProcedureMatcher } from "../../apps/control-plane/src/turn/procedure-matcher.js";
 import { ApiTaskVerifier } from "../../apps/control-plane/src/turn/task-verifier.js";
 import { NoKnowledgeRetriever, NoProcedureMatcher, NoTaskVerifier } from "../../apps/control-plane/src/turn/ports.js";
+import { NoEscalationSink } from "../../apps/control-plane/src/escalation/sink.js";
 import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
@@ -126,6 +127,7 @@ describe("the execution ladder", () => {
           : new NoProcedureMatcher(),
         knowledgeRetriever: new NoKnowledgeRetriever(),
         taskVerifier: withProcedure ? new ApiTaskVerifier() : new NoTaskVerifier(),
+      escalationSink: new NoEscalationSink(),
       }),
     };
   }
