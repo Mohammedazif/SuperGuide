@@ -1,0 +1,23 @@
+{
+  "name": "@superguide/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@superguide/client-core": "workspace:*",
+    "@superguide/contract": "workspace:*",
+    "@superguide/widget-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1"
+  }
+}

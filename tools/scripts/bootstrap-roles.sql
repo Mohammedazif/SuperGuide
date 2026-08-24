@@ -1,0 +1,20 @@
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sg_migrator') THEN
+    CREATE ROLE sg_migrator LOGIN PASSWORD 'sg_migrator_dev';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sg_app') THEN
+    CREATE ROLE sg_app LOGIN PASSWORD 'sg_app_dev';
+  END IF;
+END
+$$;
+
+ALTER ROLE sg_migrator NOBYPASSRLS NOSUPERUSER;
+ALTER ROLE sg_app NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;
+
+GRANT CREATE, CONNECT ON DATABASE superguide TO sg_migrator;
+GRANT CONNECT ON DATABASE superguide TO sg_app;
+
+ALTER SCHEMA public OWNER TO sg_migrator;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO sg_app;

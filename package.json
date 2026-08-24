@@ -1,0 +1,42 @@
+{
+  "name": "superguide",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json && pnpm -r --filter @superguide/widget --filter @superguide/console run build",
+    "typecheck": "tsc -b tsconfig.build.json",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:start": "node tools/scripts/pg-dev.mjs start",
+    "db:stop": "node tools/scripts/pg-dev.mjs stop",
+    "db:migrate": "node --import tsx apps/control-plane/src/db/migrate.ts",
+    "db:reset": "node tools/scripts/pg-dev.mjs reset",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:security": "vitest run --project security",
+    "test:e2e": "playwright test",
+    "eval": "node --import tsx eval/harness/src/cli.ts",
+    "check:forbidden": "node tools/scripts/check-forbidden.mjs",
+    "check:bundle-boundary": "node tools/scripts/check-bundle-boundary.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.20.1",
+    "@vitest/coverage-v8": "^3.2.7",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-superguide": "workspace:*",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^3.2.7"
+  }
+}

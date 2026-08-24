@@ -1,0 +1,19 @@
+{
+  "name": "@superguide/client-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@superguide/contract": "workspace:*",
+    "@superguide/executor": "workspace:*"
+  }
+}

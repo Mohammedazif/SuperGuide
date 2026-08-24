@@ -1,0 +1,41 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/contract"
+    },
+    {
+      "path": "packages/policy"
+    },
+    {
+      "path": "packages/procedures"
+    },
+    {
+      "path": "packages/observer"
+    },
+    {
+      "path": "packages/executor"
+    },
+    {
+      "path": "packages/client-core"
+    },
+    {
+      "path": "packages/widget-ui"
+    },
+    {
+      "path": "apps/control-plane"
+    },
+    {
+      "path": "apps/fixture-app"
+    },
+    {
+      "path": "eval/harness"
+    },
+    {
+      "path": "apps/widget"
+    },
+    {
+      "path": "apps/console"
+    }
+  ]
+}
