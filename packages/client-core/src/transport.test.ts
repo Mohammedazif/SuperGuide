@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Transport } from "./transport.js";
 
 const PRODUCT = "11111111-1111-4111-8111-111111111111";
+const SESSION_TOKEN = "a-session-token-this-test-invented";
 
 function transport(): Transport {
   return new Transport({ apiUrl: "https://api.trysuperguide.com", productId: PRODUCT });
@@ -34,8 +35,8 @@ describe("the transport", () => {
     expect(subject.headers()["authorization"]).toBeUndefined();
     expect(subject.headers()["x-sg-product-id"]).toBe(PRODUCT);
 
-    subject.setSessionToken("token");
-    expect(subject.headers()["authorization"]).toBe("Bearer token");
+    subject.setSessionToken(SESSION_TOKEN);
+    expect(subject.headers()["authorization"]).toBe(`Bearer ${SESSION_TOKEN}`);
 
     subject.setSessionToken(null);
     expect(subject.headers()["authorization"]).toBeUndefined();
