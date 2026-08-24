@@ -12,7 +12,9 @@
     ],
     "types": [
       "node"
-    ]
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
   "include": [
     "tests/**/*.ts",
