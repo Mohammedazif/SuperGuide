@@ -1,0 +1,11 @@
+CREATE POLICY tenant_administration        ON tenant        TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY product_administration       ON product       TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY product_secret_administration ON product_secret TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY procedure_administration     ON procedure     TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY tool_administration          ON tool          TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY document_administration      ON document      TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY chunk_administration         ON chunk         TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY end_user_administration      ON end_user      TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY conversation_administration  ON conversation  TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY message_administration       ON message       TO sg_migrator USING (true) WITH CHECK (true);
+CREATE POLICY step_administration          ON step          TO sg_migrator USING (true) WITH CHECK (true);

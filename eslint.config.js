@@ -62,7 +62,10 @@ export default tseslint.config(
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["apps/*/tsup.config.ts"],
+          defaultProject: "tsconfig.json",
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -267,6 +270,20 @@ export default tseslint.config(
   {
     files: ["apps/control-plane/src/env.ts", "tools/**/*.mjs", "tools/**/*.js"],
     rules: { "no-restricted-properties": "off" },
+  },
+
+  {
+    files: ["apps/control-plane/src/**/*.ts"],
+    ignores: ["apps/control-plane/src/db/client.ts", "apps/control-plane/src/db/migrate.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='transaction']",
+          message: "Open transactions through withProduct so sg.product_id is always set.",
+        },
+      ],
+    },
   },
 
   {
