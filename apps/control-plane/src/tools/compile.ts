@@ -187,7 +187,7 @@ function controlTools(): CompiledTool[] {
       ),
       risk: "read",
       ladderLevel: "L5",
-      timeoutMs: 300_000,
+      timeoutMs: 120_000,
       expectTemplate: [{ kind: "capability_status", status: "ok" }],
       source: { kind: "ask_user" },
     },

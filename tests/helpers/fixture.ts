@@ -100,3 +100,58 @@ export async function ingestFixtureTools(options: IngestOptions): Promise<string
     await client.end();
   }
 }
+
+export async function insertProcedure(
+  productId: string,
+  slug: string,
+  sourceYaml: string,
+  body: unknown,
+  version = 1,
+): Promise<void> {
+  const client = new pg.Client({ connectionString: migrationDatabaseUrl() });
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO procedure (product_id, slug, version, body, source_yaml, active, created_by)
+       VALUES ($1, $2, $3, $4, $5, true, 'test')`,
+      [productId, slug, version, JSON.stringify(body), sourceYaml],
+    );
+  } finally {
+    await client.end();
+  }
+}
+
+export async function enableCapability(
+  productId: string,
+  name: string,
+  risk: string,
+  parameters: Record<string, unknown>,
+  description: string,
+): Promise<void> {
+  const client = new pg.Client({ connectionString: migrationDatabaseUrl() });
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO tool (product_id, name, kind, risk_class, definition, expect_template, enabled)
+       VALUES ($1, $2, 'capability', $3, $4, $5, true)
+       ON CONFLICT (product_id, name) DO UPDATE
+         SET risk_class = EXCLUDED.risk_class,
+             definition = EXCLUDED.definition,
+             enabled = true`,
+      [
+        productId,
+        `capability_${name}`,
+        risk,
+        JSON.stringify({
+          kind: "capability",
+          capability: name,
+          description,
+          parameterSchema: parameters,
+        }),
+        JSON.stringify([{ kind: "capability_status", status: "ok" }]),
+      ],
+    );
+  } finally {
+    await client.end();
+  }
+}

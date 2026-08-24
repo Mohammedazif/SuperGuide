@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import Fastify, { type FastifyInstance, type RawServerDefault } from "fastify";
 import {
+  capabilityRegistrationSchema,
   chatRequestSchema,
   confirmRequestSchema,
   createSessionRequestSchema,
@@ -26,6 +27,7 @@ import {
 import type { IdentityVerifier } from "./auth/identity-verifier.js";
 import { findProduct } from "./repository/products.js";
 import { createAnonymousEndUser, upsertIdentifiedEndUser } from "./repository/end-users.js";
+import { registerCapabilities } from "./repository/tools.js";
 import {
   createConversation,
   findConversation,
@@ -291,6 +293,21 @@ export function buildServer(deps: ServerDependencies): AppServer {
       return reply.status(200).send(config);
     },
   );
+
+  app.post("/v1/capabilities", async (request, reply) => {
+    const product = request.sgProduct;
+    if (product === undefined) throw new ApiFailure("product_unknown");
+    requireSession(request);
+
+    const body = capabilityRegistrationSchema.safeParse(request.body);
+    if (!body.success) throw new ApiFailure("payload_invalid");
+
+    const outcome = await withProduct(deps.db, product.id, (tx) =>
+      registerCapabilities(tx, product.id, body.data.capabilities),
+    );
+
+    return reply.status(200).send(outcome);
+  });
 
   app.post("/v1/chat", async (request, reply) => {
     const product = request.sgProduct;
