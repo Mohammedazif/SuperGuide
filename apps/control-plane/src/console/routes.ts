@@ -15,6 +15,8 @@ import { findConversation } from "../repository/conversations.js";
 import { ApiFailure } from "../errors.js";
 import { CONSOLE_COOKIE, readCookie, verifyConsoleToken, type ConsoleClaims } from "../auth/console-token.js";
 import { renderTrajectory, renderProcedureEditor, renderConsoleShell } from "./views.js";
+import { OnboardingFailure, onboardProduct } from "../onboarding/onboard.js";
+import { z } from "zod";
 
 export interface ConsoleDependencies {
   db: Database;
@@ -192,6 +194,47 @@ export function registerConsoleRoutes<Logger extends FastifyBaseLogger>(
         slug: published.slug,
         version: published.version,
       });
+    },
+  );
+
+  // Onboarding is data, not code: a published OpenAPI document and a route table are enough.
+  // Everything discovered arrives disabled, for a person to review before it can be called.
+  app.post<{ Querystring: { productId?: string } }>(
+    "/internal/onboard",
+    async (request, reply) => {
+      requireOperator(request);
+      const productId = request.query.productId;
+      if (productId === undefined) throw new ApiFailure("payload_invalid");
+
+      const body = z
+        .object({
+          openApiUrl: z.url(),
+          routeRegistryUrl: z.url().nullable().default(null),
+          apiBaseUrl: z.url().nullable().default(null),
+        })
+        .safeParse(request.body);
+      if (!body.success) throw new ApiFailure("payload_invalid");
+
+      try {
+        const outcome = await withProduct(deps.db, productId, (tx) =>
+          onboardProduct(
+            tx,
+            {
+              productId,
+              openApiUrl: body.data.openApiUrl,
+              routeRegistryUrl: body.data.routeRegistryUrl,
+              apiBaseUrlOverride: body.data.apiBaseUrl,
+            },
+            { signal: AbortSignal.timeout(30_000) },
+          ),
+        );
+        return await reply.send(outcome);
+      } catch (error) {
+        if (error instanceof OnboardingFailure) {
+          return reply.status(422).send({ error: { code: "payload_invalid", message: error.message } });
+        }
+        throw error;
+      }
     },
   );
 

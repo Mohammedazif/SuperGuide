@@ -23,6 +23,7 @@
     "eval/tasks/**/*.ts",
     "packages/*/src/**/*.test.ts",
     "packages/*/src/**/*.test.tsx",
-    "apps/*/src/**/*.test.ts"
+    "apps/*/src/**/*.test.ts",
+    "tools/scripts/*.ts"
   ]
 }

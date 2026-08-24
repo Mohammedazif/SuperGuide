@@ -15,12 +15,12 @@ Playwright 1.62.
 | `pnpm lint` | pass | boundaries, purity, banned vendor names, no warnings permitted |
 | `pnpm typecheck` | pass | `tsc -b` over every project, then the test tree |
 | `pnpm build` | pass | widget bundle 377 KB |
-| `pnpm test:unit` | pass | 95 tests, 10 files |
+| `pnpm test:unit` | pass | 115 tests |
 | `pnpm test:unit:coverage` | pass | `@superguide/policy` at 100% statements, branches, functions, lines |
 | `docker compose up -d` | **not run** | Docker is not installed and there is no root on this machine |
 | `node tools/scripts/pg-dev.mjs reset` | pass | substitute: the same PostgreSQL 16 with pgvector, same port, same two roles |
 | `pnpm db:migrate` | pass | 15 migrations applied to a clean database |
-| `pnpm test:integration` | pass | 35 passed, 2 skipped |
+| `pnpm test:integration` | pass | 44 passed, 2 skipped |
 | `pnpm test:security` | pass | 26 tests |
 | `pnpm exec playwright install --with-deps` | **not run** | `--with-deps` installs OS packages and needs root |
 | `pnpm exec playwright install chromium` | pass | substitute: the browser itself installs and launches fine |
@@ -193,8 +193,9 @@ enforced on every request, including the stream.
 
 ## Defects found by writing the tests
 
-These were all real, and all are fixed. They are listed because they are the argument for
-having written the tests at all.
+These were all real. Each is fixed, and each now has a direct regression test that was checked
+by reverting its fix and confirming the test fails naming the actual problem — the browser suite
+would have caught most of them, but twenty-five seconds later and with a confusing failure.
 
 1. A CORS preflight could not resolve the product, so the widget could not open a session from
    any host page.
@@ -212,3 +213,9 @@ having written the tests at all.
    same-origin frame — exactly where the specification requires traversal to work.
 8. `ask_user` declared a timeout above the action envelope's own cap, so every attempt to ask a
    question failed schema validation.
+
+Two flaws in the tests themselves came out of guarding these. Files ending `.tsx` were never
+collected by the unit project, so the widget mount tests had silently never run. And the test
+asserting that a chat returns before its turn finishes used a fifty millisecond wall-clock
+threshold, which is a flake waiting to happen; it now asserts the turn is still in flight, which
+is the property actually being claimed.

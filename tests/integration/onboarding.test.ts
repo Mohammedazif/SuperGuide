@@ -14,7 +14,8 @@ import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { PendingCalls } from "../../apps/control-plane/src/turn/pending-calls.js";
 import { ConfirmationRegistry } from "../../apps/control-plane/src/turn/confirmations.js";
 import { SEED_ACCOUNT_ID } from "../../apps/fixture-app/src/data.js";
-import { createTestProduct, testEnvironment } from "../helpers/server.js";
+import { createTestProduct, startHarness, testEnvironment } from "../helpers/server.js";
+import { signConsoleToken } from "../../apps/control-plane/src/auth/console-token.js";
 import { startFixtureApp, type RunningFixture } from "../helpers/fixture.js";
 import { appDatabaseUrl, migrationDatabaseUrl } from "../helpers/database.js";
 
@@ -73,6 +74,50 @@ describe("onboarding a product from its published spec", () => {
     expect(byName.get("api_changeSubscription")?.risk_class).toBe("financial");
 
     for (const row of rows.rows) expect(row.enabled).toBe(false);
+  });
+
+  it("onboards over the console route the way an operator would", async () => {
+    const { productId: freshProduct, tenantId } = await createTestProduct();
+    const harness = await startHarness();
+    try {
+      const issuedAt = Math.floor(Date.now() / 1000);
+      const cookie = `sg_console=${signConsoleToken(
+        Buffer.from(testEnvironment().SG_SESSION_SIGNING_KEY, "base64"),
+        { operatorEmail: "lead@northwind.example", tenantId, issuedAt, expiresAt: issuedAt + 3600 },
+      )}`;
+
+      const response = await fetch(
+        `${harness.baseUrl}/internal/onboard?productId=${freshProduct}`,
+        {
+          method: "POST",
+          headers: { cookie, "content-type": "application/json" },
+          body: JSON.stringify({
+            openApiUrl: `${fixture.baseUrl}/openapi.json`,
+            routeRegistryUrl: `${fixture.baseUrl}/route-registry.json`,
+            apiBaseUrl: fixture.baseUrl,
+          }),
+        },
+      );
+
+      expect(response.status).toBe(200);
+      const outcome = (await response.json()) as {
+        toolsDiscovered: number;
+        toolsAwaitingReview: number;
+        routesDiscovered: number;
+      };
+      expect(outcome.toolsDiscovered).toBe(9);
+      expect(outcome.toolsAwaitingReview).toBe(9);
+      expect(outcome.routesDiscovered).toBe(6);
+
+      const refused = await fetch(`${harness.baseUrl}/internal/onboard?productId=${freshProduct}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ openApiUrl: `${fixture.baseUrl}/openapi.json` }),
+      });
+      expect(refused.status).toBe(401);
+    } finally {
+      await harness.close();
+    }
   });
 
   it("serves the script tag the integrating engineer pastes in", async () => {

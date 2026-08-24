@@ -330,6 +330,7 @@ export default tseslint.config(
       "apps/fixture-app/src/env.ts",
       "tools/**/*.mjs",
       "tools/**/*.js",
+      "tools/scripts/demo.ts",
     ],
     rules: { "no-restricted-properties": "off" },
   },

@@ -23,9 +23,15 @@ importers:
       '@superguide/contract':
         specifier: workspace:*
         version: link:packages/contract
+      '@superguide/control-plane':
+        specifier: workspace:*
+        version: link:apps/control-plane
       '@superguide/executor':
         specifier: workspace:*
         version: link:packages/executor
+      '@superguide/fixture-app':
+        specifier: workspace:*
+        version: link:apps/fixture-app
       '@superguide/observer':
         specifier: workspace:*
         version: link:packages/observer
