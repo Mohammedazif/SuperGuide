@@ -80,9 +80,29 @@ pnpm --filter @superguide/control-plane run dev
 ```
 
 Run `pnpm env:init` first. It writes `.env` from `.env.example` and generates the three
-signing and encryption keys, leaving `ANTHROPIC_API_KEY` for you to fill in. Every variable
-is validated by a Zod schema at process start and the process exits non-zero if the
-environment is wrong.
+signing and encryption keys, leaving the model provider key for you to fill in. Every
+variable is validated by a Zod schema at process start and the process exits non-zero if
+the environment is wrong.
+
+### Model providers
+
+`SG_MODEL_PROVIDER` selects who serves the planner and the classifiers; only the selected
+provider's key must be set:
+
+| Provider | Key variable | Planner | Classifier |
+|---|---|---|---|
+| `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-opus-5` | `claude-haiku-4-5` |
+| `openai` | `OPENAI_API_KEY` | `gpt-5.5` | `gpt-5.4-mini` |
+| `gemini` | `GEMINI_API_KEY` | `gemini-2.5-pro` | `gemini-2.5-flash` |
+
+The turn loop, tool compilation, and journal all speak one internal message shape; each
+provider is a `ModelClient` that translates at the edge
+(`apps/control-plane/src/model/`). The routing table's model ids name roles — planner or
+classifier — and each client maps them to its own vendor's models, so effort escalation
+and the recovery path work identically everywhere. Reasoning state a vendor requires back
+on later turns (encrypted reasoning items, thought signatures) rides the turn history, so
+a conversation is served end to end by the provider that started it. Switching is one
+`.env` line plus the matching key — no rebuild.
 
 No key value is committed anywhere in this repository, and none should be: `.env.example`
 ships those three fields blank, and CI generates its own per run. The fixed

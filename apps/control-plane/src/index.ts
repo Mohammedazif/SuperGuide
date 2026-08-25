@@ -16,6 +16,9 @@ export {
   type GenerateResult,
   type ModelClient,
 } from "./model/client.js";
+export { OpenAIModelClient } from "./model/openai-client.js";
+export { GeminiModelClient } from "./model/gemini-client.js";
+export { makeModelClient, providerKeyOf } from "./model/provider.js";
 export { ModelProcedureMatcher } from "./turn/procedure-matcher.js";
 export { ApiTaskVerifier } from "./turn/task-verifier.js";
 export { NoKnowledgeRetriever, NoProcedureMatcher, NoTaskVerifier } from "./turn/ports.js";

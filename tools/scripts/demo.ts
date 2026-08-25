@@ -6,7 +6,6 @@ import { pino } from "pino";
 import { buildFixtureApp } from "@superguide/fixture-app";
 import { FIXTURE_ROUTE_REGISTRY, openApiDocument } from "@superguide/fixture-app";
 import {
-  AnthropicModelClient,
   ConfirmationRegistry,
   EphemeralBus,
   PendingCalls,
@@ -20,6 +19,7 @@ import {
   createRateLimiters,
   createTurnExecutor,
   ingestOpenApi,
+  makeModelClient,
   parseEnvironment,
   runMigrations,
   NoEscalationSink,
@@ -39,8 +39,19 @@ function read(name: string, fallback: string): string {
   return process.env[name] ?? fallback;
 }
 
+const PROVIDER =
+  process.env["SG_MODEL_PROVIDER"] === "openai" || process.env["SG_MODEL_PROVIDER"] === "gemini"
+    ? process.env["SG_MODEL_PROVIDER"]
+    : "anthropic";
+const PROVIDER_KEY_NAME =
+  PROVIDER === "openai"
+    ? "OPENAI_API_KEY"
+    : PROVIDER === "gemini"
+      ? "GEMINI_API_KEY"
+      : "ANTHROPIC_API_KEY";
+
 function liveKey(): string | null {
-  const key = process.env["ANTHROPIC_API_KEY"];
+  const key = process.env[PROVIDER_KEY_NAME];
   if (key === undefined || key.length === 0) return null;
   if (/^(sg-local|test-key|eval-|e2e-)/.test(key)) return null;
   return key;
@@ -178,7 +189,10 @@ async function main(): Promise<void> {
     SG_MIGRATION_DATABASE_URL: migrationUrl,
     SG_PORT: String(API_PORT),
     SG_PUBLIC_ORIGIN: `http://127.0.0.1:${String(API_PORT)}`,
-    ANTHROPIC_API_KEY: key ?? "demo-recorded-transcript",
+    SG_MODEL_PROVIDER: key === null ? "anthropic" : PROVIDER,
+    ANTHROPIC_API_KEY: read("ANTHROPIC_API_KEY", "demo-recorded-transcript"),
+    OPENAI_API_KEY: read("OPENAI_API_KEY", ""),
+    GEMINI_API_KEY: read("GEMINI_API_KEY", ""),
     SG_SESSION_SIGNING_KEY: read("SG_SESSION_SIGNING_KEY", Buffer.alloc(32, 7).toString("base64")),
     SG_SECRET_ENCRYPTION_KEY: read("SG_SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 9).toString("base64")),
     SG_WEBHOOK_SIGNING_KEY: read("SG_WEBHOOK_SIGNING_KEY", Buffer.alloc(32, 11).toString("base64")),
@@ -195,9 +209,7 @@ async function main(): Promise<void> {
   const confirmations = new ConfirmationRegistry();
 
   const model: ModelClient =
-    key === null
-      ? new ScriptedModelClient({ script: RECORDED })
-      : new AnthropicModelClient({ apiKey: key });
+    key === null ? new ScriptedModelClient({ script: RECORDED }) : makeModelClient(env);
 
   const turnRunner = createAgentTurnRunner({
     env,
@@ -257,8 +269,8 @@ async function main(): Promise<void> {
       `  Product id               ${productId}`,
       "",
       key === null
-        ? "  No ANTHROPIC_API_KEY is set, so the planner is replaying a short recorded\n  transcript. Ask anything and it answers from the account. Set a real key to\n  run the actual model."
-        : "  A live model is planning each turn.",
+        ? `  No ${PROVIDER_KEY_NAME} is set, so the planner is replaying a short recorded\n  transcript. Ask anything and it answers from the account. Set a real key to\n  run the actual model.`
+        : `  A live model (provider ${PROVIDER}) is planning each turn.`,
       "",
       "  Try: What plan are we on?",
       "",

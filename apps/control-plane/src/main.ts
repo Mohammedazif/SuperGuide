@@ -13,7 +13,7 @@ import { recoverInFlightTurns } from "./turn/recovery.js";
 import { buildServer } from "./server.js";
 import { createAgentTurnRunner } from "./turn/runner.js";
 import { createTurnExecutor } from "./turn/loop.js";
-import { AnthropicModelClient } from "./model/client.js";
+import { makeModelClient } from "./model/provider.js";
 import { PgVectorRetriever } from "./knowledge/retrieve.js";
 import { HashingEmbeddingProvider } from "./knowledge/embedding.js";
 import { ModelProcedureMatcher } from "./turn/procedure-matcher.js";
@@ -35,7 +35,7 @@ const confirmations = new ConfirmationRegistry();
 await notifier.start();
 await recoverInFlightTurns(db, logger);
 
-const modelClient = new AnthropicModelClient({ apiKey: env.ANTHROPIC_API_KEY });
+const modelClient = makeModelClient(env);
 
 const turnRunner = createAgentTurnRunner({
   env,

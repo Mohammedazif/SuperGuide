@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { AnthropicModelClient } from "../../apps/control-plane/src/model/client.js";
+import { AnthropicModelClient, type ModelClient } from "../../apps/control-plane/src/model/client.js";
+import { OpenAIModelClient } from "../../apps/control-plane/src/model/openai-client.js";
 import { buildCachedPrefix } from "../../apps/control-plane/src/model/prompt.js";
 import { MODEL_ROUTING } from "../../apps/control-plane/src/model/routing.js";
 import type { CompiledTool } from "../../apps/control-plane/src/tools/compiled.js";
-import { LIVE_MODEL_REASON, liveApiKey } from "../helpers/live.js";
+import { LIVE_MODEL_REASON, liveProvider } from "../helpers/live.js";
 
-const apiKey = liveApiKey();
+const live = liveProvider();
+const apiKey = live.key;
+
+// Gemini is excluded: its implicit caching makes no per-request read guarantee,
+// so the cache assertion has nothing honest to hold on to.
+function liveClient(key: string): ModelClient | null {
+  if (live.provider === "anthropic") return new AnthropicModelClient({ apiKey: key });
+  if (live.provider === "openai") return new OpenAIModelClient({ apiKey: key });
+  return null;
+}
 
 function padding(index: number): string {
   return `Reference note ${String(index)}: ${"the account holder is responsible for keeping billing details current. ".repeat(20)}`;
@@ -35,11 +45,12 @@ const tools: CompiledTool[] = Array.from({ length: 8 }, (_, index) => ({
   },
 }));
 
-describe.skipIf(apiKey === null)("live model calls", () => {
+describe.skipIf(apiKey === null || live.provider === "gemini")("live model calls", () => {
   it("reads the prompt cache on the second call of a conversation", async () => {
     if (apiKey === null) throw new Error(LIVE_MODEL_REASON);
 
-    const client = new AnthropicModelClient({ apiKey });
+    const client = liveClient(apiKey);
+    if (client === null) throw new Error("no cache-asserting client for this provider");
     const prefix = buildCachedPrefix({
       productName: "Northwind Logistics",
       stepBudget: 12,

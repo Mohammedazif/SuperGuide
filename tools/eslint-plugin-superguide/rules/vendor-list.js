@@ -17,7 +17,6 @@ export const UNAMBIGUOUS_VENDOR_NAMES = [
   "freshdesk",
   "helpscout",
   "decagon",
-  "openai",
   "langchain",
   "llamaindex",
   "pinecone",

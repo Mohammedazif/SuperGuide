@@ -146,7 +146,8 @@ export async function plan(request: PlanRequest): Promise<PlanResult> {
     assistantTurn,
     usage: generated.usage,
     latencyMs: generated.latencyMs,
-    model: request.choice.model,
+    // The routed id names a role; the message carries the model that answered.
+    model: generated.message.model,
     text,
   };
 

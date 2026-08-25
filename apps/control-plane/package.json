@@ -15,13 +15,15 @@
     "dev": "node --import tsx --watch src/main.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@google/genai": "^2.18.0",
     "@superguide/contract": "workspace:*",
     "@superguide/policy": "workspace:*",
     "@superguide/procedures": "workspace:*",
-    "@anthropic-ai/sdk": "^0.120.0",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.1",
     "jose": "^6.2.10",
+    "openai": "^7.5.0",
     "pg": "^8.23.0",
     "pino": "^10.3.1",
     "yaml": "^2.9.0",
