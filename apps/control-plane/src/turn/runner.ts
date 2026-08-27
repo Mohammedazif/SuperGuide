@@ -8,7 +8,7 @@ import { appendMessage } from "../repository/journal.js";
 import type { PendingCalls } from "./pending-calls.js";
 import type { ConfirmationRegistry } from "./confirmations.js";
 import type { TurnRunner, TurnStartInput } from "./types.js";
-import { describeError } from "../errors.js";
+import { publicFailureMessage } from "../errors.js";
 import type { ResolutionState } from "@superguide/contract/public";
 
 export interface TurnExecutionContext extends TurnStartInput {
@@ -66,7 +66,7 @@ export function createAgentTurnRunner(deps: TurnRunnerDependencies): TurnRunner 
   };
 
   const fail = async (input: TurnStartInput, error: unknown): Promise<void> => {
-    const message = describeError(error);
+    const message = publicFailureMessage(error);
     deps.logger.error(
       { err: error, turnId: input.turnId, conversationId: input.conversationId },
       "turn failed",

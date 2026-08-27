@@ -35,7 +35,7 @@ import { createRequestSigner, type RequestSigner } from "../secrets/credentials.
 import { assertCredentialPermitted } from "../secrets/forwarding-guard.js";
 import { loadProductSecret } from "../repository/product-secrets.js";
 import type { TurnExecutionContext, TurnExecutionOutcome } from "./runner.js";
-import { TurnFailure, describeError } from "../errors.js";
+import { TurnFailure } from "../errors.js";
 import type { EscalationReason } from "@superguide/contract/internal";
 
 const CONFIRMATION_TIMEOUT_MS = 120_000;
@@ -716,7 +716,9 @@ export function createTurnExecutor(deps: LoopDependencies) {
         };
       }
       deps.logger.error({ err: error, turnId: context.turnId }, "the turn could not be run");
-      throw new TurnFailure("turn_failed", describeError(error), { cause: error });
+      throw new TurnFailure("turn_failed", "The turn could not be completed.", {
+        cause: error,
+      });
     }
   };
 }
