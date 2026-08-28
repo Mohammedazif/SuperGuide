@@ -34,7 +34,8 @@ function concealEvent(event: TurnEvent): TurnEvent {
         ...event,
         summary: concealClientText(event.summary, "act on the page"),
       };
-    default:
+    case "quota":
+    case "turn-end":
       return event;
   }
 }

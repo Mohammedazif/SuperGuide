@@ -151,7 +151,7 @@ function parsedArguments(raw: string): Record<string, unknown> {
 export function fromOpenAIResponse(response: Response): Anthropic.Message {
   const content: Anthropic.ContentBlock[] = [];
   const refusal = { seen: false };
-  for (const item of response.output ?? []) {
+  for (const item of response.output) {
     if (item.type === "reasoning") {
       content.push(stashReasoning(item));
     } else if (item.type === "message") {
@@ -195,8 +195,8 @@ export function fromOpenAIResponse(response: Response): Anthropic.Message {
     usage: {
       input_tokens: response.usage?.input_tokens ?? 0,
       output_tokens: response.usage?.output_tokens ?? 0,
-      cache_read_input_tokens: response.usage?.input_tokens_details?.cached_tokens ?? 0,
-      cache_creation_input_tokens: response.usage?.input_tokens_details?.cache_write_tokens ?? 0,
+      cache_read_input_tokens: response.usage?.input_tokens_details.cached_tokens ?? 0,
+      cache_creation_input_tokens: response.usage?.input_tokens_details.cache_write_tokens ?? 0,
       cache_creation: null,
       server_tool_use: null,
       service_tier: null,
