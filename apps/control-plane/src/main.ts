@@ -5,6 +5,10 @@ import { createLogger } from "./logging.js";
 import { createDatabase, withProduct } from "./db/client.js";
 import { EventBus } from "./anywhere/bus.js";
 import { loadAdapterDirectory } from "./anywhere/adapters-fs.js";
+import { TurnAgent } from "./anywhere/agent/loop.js";
+import { anywherePlan, anywhereScan } from "./anywhere/agent/bind.js";
+import { TurnStore } from "./anywhere/store.js";
+import { QuotaService } from "./anywhere/quota.js";
 import { PostgresNotifier } from "./events/notifier.js";
 import { EphemeralBus } from "./events/ephemeral.js";
 import { StreamRegistry } from "./events/stream.js";
@@ -45,6 +49,18 @@ await notifier.start();
 await recoverInFlightTurns(db, logger);
 
 const modelClient = makeModelClient(env);
+
+const anywhereAgent =
+  env.SG_ANYWHERE_AGENT === "on"
+    ? new TurnAgent({
+        env,
+        pool,
+        store: new TurnStore(pool),
+        quotas: new QuotaService(pool, env),
+        plan: anywherePlan(modelClient),
+        scan: anywhereScan(modelClient),
+      })
+    : null;
 
 const turnRunner = createAgentTurnRunner({
   env,
@@ -88,7 +104,7 @@ const app = buildServer({
   pendingCalls,
   confirmations,
   turnRunner,
-  anywhere: { bus: anywhereBus, agent: null, adapterSet },
+  anywhere: { bus: anywhereBus, agent: anywhereAgent, adapterSet },
   rateLimiters: createRateLimiters(),
   identityVerifier: new AsymmetricIdentityVerifier({
     logger,

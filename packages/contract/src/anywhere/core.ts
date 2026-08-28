@@ -5,6 +5,8 @@ export type GrantTier = z.infer<typeof grantTierSchema>;
 
 export const anywhereRiskClassSchema = z.enum(["read", "write", "sensitive"]);
 export type AnywhereRiskClass = z.infer<typeof anywhereRiskClassSchema>;
+export const riskClassSchema = anywhereRiskClassSchema;
+export type RiskClass = AnywhereRiskClass;
 
 export const syntheticIdSchema = z.string().regex(/^e[0-9a-f]{8}$/);
 export type SyntheticId = z.infer<typeof syntheticIdSchema>;

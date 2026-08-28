@@ -155,3 +155,7 @@ export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
 }
 
 export { ruleMatches, tokenise, firstMatchingRule } from "./matching.js";
+export {
+  evaluateAnywherePolicy,
+  describeActionForConfirmation,
+} from "./anywhere.js";

@@ -34,6 +34,7 @@ const INTERNAL_PACKAGES = {
   contractPublic: "@superguide/contract/public",
   contractInternal: "@superguide/contract/internal",
   contractAnywhere: "@superguide/contract/anywhere",
+  adapters: "@superguide/adapters",
   policy: "@superguide/policy",
   procedures: "@superguide/procedures",
   observer: "@superguide/observer",
@@ -164,16 +165,24 @@ export default tseslint.config(
     },
   },
 
+  boundary(
+    ["packages/adapters/**/*.ts"],
+    [INTERNAL_PACKAGES.contractAnywhere],
+    "adapters may import only @superguide/contract/anywhere.",
+  ),
+
   {
     files: ["packages/policy/**/*.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
-          paths: forbidden([INTERNAL_PACKAGES.contractPublic]).map((name) => ({
-            name,
-            message: "policy may import only @superguide/contract/public.",
-          })),
+          paths: forbidden([INTERNAL_PACKAGES.contractPublic, INTERNAL_PACKAGES.contractAnywhere]).map(
+            (name) => ({
+              name,
+              message: "policy may import only contract public and anywhere schemas.",
+            }),
+          ),
           patterns: NODE_BUILTINS.map((g) => ({
             group: [g],
             message: "policy is pure: no node builtins.",
@@ -320,6 +329,7 @@ export default tseslint.config(
       INTERNAL_PACKAGES.contractPublic,
       INTERNAL_PACKAGES.contractInternal,
       INTERNAL_PACKAGES.contractAnywhere,
+      INTERNAL_PACKAGES.adapters,
       INTERNAL_PACKAGES.policy,
       INTERNAL_PACKAGES.procedures,
     ],

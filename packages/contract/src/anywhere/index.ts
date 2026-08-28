@@ -7,3 +7,6 @@ export * from "./action.js";
 export * from "./adapter.js";
 export * from "./events.js";
 export * from "./wire.js";
+export * from "./policy.js";
+export * from "./canonical.js";
+export * from "./predicate-eval.js";

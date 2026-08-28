@@ -54,7 +54,7 @@ export const environmentSchema = z
     SG_DAILY_TASK_QUOTA: z.coerce.number().int().min(0).default(20),
     SG_DAILY_IP_QUOTA: z.coerce.number().int().min(0).default(200),
     SG_ALLOWED_EXTENSION_IDS: commaSeparatedOrigins,
-    SG_ANYWHERE_AGENT: z.enum(["on", "off"]).default("off"),
+    SG_ANYWHERE_AGENT: z.enum(["on", "off"]).default("on"),
     SG_ADAPTERS: z.enum(["on", "off"]).default("on"),
   })
   .superRefine((value, context) => {

@@ -8,6 +8,9 @@
       "path": "packages/policy"
     },
     {
+      "path": "packages/adapters"
+    },
+    {
       "path": "packages/procedures"
     },
     {

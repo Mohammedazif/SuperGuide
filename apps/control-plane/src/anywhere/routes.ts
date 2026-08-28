@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type pg from "pg";
+import { matchAdapter } from "@superguide/adapters";
 import {
   actionResultRequestSchema,
   anywhereConfirmRequestSchema,
@@ -9,7 +10,6 @@ import {
   type AdapterSet,
   type AnywhereErrorCode,
   type Quota,
-  type SiteAdapter,
 } from "@superguide/contract/anywhere";
 import type { DeviceTokenClaims } from "@superguide/contract/internal";
 import type { Environment } from "../env.js";
@@ -182,7 +182,7 @@ export function registerAnywhereRoutes(app: AppServer, deps: AnywhereRouteDeps):
       tier: body.data.tier,
       taskText: body.data.taskText,
       digest: body.data.digest,
-      adapter: matchAdapterByOrigin(adapterSet, body.data.origin),
+      adapter: matchAdapter(adapterSet.adapters, new URL(body.data.origin).hostname),
     });
     await reply.status(202).send({ turnId, quota });
   });
@@ -340,12 +340,4 @@ export function registerAnywhereRoutes(app: AppServer, deps: AnywhereRouteDeps):
   });
 }
 
-function matchAdapterByOrigin(set: AdapterSet, origin: string): SiteAdapter | null {
-  let hostname: string;
-  try {
-    hostname = new URL(origin).hostname;
-  } catch {
-    return null;
-  }
-  return set.adapters.find((adapter) => adapter.host === hostname) ?? null;
-}
+

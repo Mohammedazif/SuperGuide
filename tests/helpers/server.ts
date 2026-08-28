@@ -3,6 +3,8 @@ import pg from "pg";
 import { pino } from "pino";
 import { createDatabase, withProduct, type DatabaseHandle } from "../../apps/control-plane/src/db/client.js";
 import { EventBus } from "../../apps/control-plane/src/anywhere/bus.js";
+import type { TurnAgentStarter } from "../../apps/control-plane/src/anywhere/types.js";
+import type { AdapterSet } from "@superguide/contract/anywhere";
 import { buildServer, type AppServer, type ServerDependencies } from "../../apps/control-plane/src/server.js";
 import { parseEnvironment, type Environment } from "../../apps/control-plane/src/env.js";
 import { PostgresNotifier } from "../../apps/control-plane/src/events/notifier.js";
@@ -99,6 +101,9 @@ export async function startHarness(options: {
   env?: Record<string, string>;
   identityVerifier?: ServerDependencies["identityVerifier"];
   rateLimiters?: ServerDependencies["rateLimiters"];
+  anywhereAgent?: TurnAgentStarter | null;
+  makeAnywhereAgent?: (context: { env: Environment; pool: pg.Pool }) => TurnAgentStarter;
+  adapterSet?: AdapterSet;
 } = {}): Promise<TestHarness> {
   const env = testEnvironment(options.env ?? {});
   const logger = pino({ level: "silent" });
@@ -146,8 +151,11 @@ export async function startHarness(options: {
     heartbeatIntervalMs: 1000,
     anywhere: {
       bus: anywhereBus,
-      agent: null,
-      adapterSet: { version: 1, adapters: [] },
+      agent:
+        options.anywhereAgent ??
+        options.makeAnywhereAgent?.({ env, pool: database.pool }) ??
+        null,
+      adapterSet: options.adapterSet ?? { version: 1, adapters: [] },
     },
   };
 

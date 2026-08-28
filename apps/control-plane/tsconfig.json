@@ -22,6 +22,9 @@
       "path": "../../packages/contract"
     },
     {
+      "path": "../../packages/adapters"
+    },
+    {
       "path": "../../packages/policy"
     },
     {
