@@ -1,4 +1,18 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+// src/env.ts and dist/env.js are both two levels below apps/control-plane, which is
+// one level below the repo root. pnpm --filter runs with cwd at the package, so Node's
+// --env-file=.env would miss the file written by `pnpm env:init`.
+const REPO_ROOT_ENV = join(dirname(fileURLToPath(import.meta.url)), "../../../.env");
+
+function loadRepoDotEnv(): void {
+  if (existsSync(REPO_ROOT_ENV)) {
+    process.loadEnvFile(REPO_ROOT_ENV);
+  }
+}
 
 function base64Key(minimumBytes: number, exactBytes?: number) {
   return z.string().refine(
@@ -85,6 +99,7 @@ export class EnvironmentError extends Error {
 }
 
 export function loadMigrationConnectionString(): string {
+  loadRepoDotEnv();
   const source = process.env;
   const url = source["SG_MIGRATION_DATABASE_URL"] ?? source["SG_DATABASE_URL"];
   if (url === undefined || url.length === 0) {
@@ -94,6 +109,7 @@ export function loadMigrationConnectionString(): string {
 }
 
 export function loadEnvironmentOrExit(): Environment {
+  loadRepoDotEnv();
   try {
     return parseEnvironment(process.env);
   } catch (error) {

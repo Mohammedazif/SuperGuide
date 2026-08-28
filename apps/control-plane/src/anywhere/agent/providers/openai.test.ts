@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Response } from "openai/resources/responses/responses";
-import { buildCachedPrefix } from "./prompt.js";
-import type { CompiledTool } from "../tools/compiled.js";
-import { z } from "zod";
-import { fromOpenAIResponse, jsonSchemaForOpenAI, toOpenAIInput, toOpenAITools } from "./openai-client.js";
+import { buildPlannerRequest, SYSTEM_PROMPT } from "../prompts.js";
+import { fromOpenAIResponse, OPENAI_PLANNER_MODEL, toOpenAIRequest } from "./openai.js";
 
 function fakeResponse(partial: {
   output: unknown[];
@@ -27,88 +25,60 @@ const USAGE = {
   output_tokens_details: { reasoning_tokens: 10 },
 };
 
-const TOOL: CompiledTool = {
-  name: "api_update_billing",
-  description: "Update the billing address",
-  inputSchema: {
-    type: "object",
-    properties: { intent: { type: "string" }, line1: { type: "string" } },
-    required: ["intent"],
-    additionalProperties: false,
-  },
-  risk: "write",
-  ladderLevel: "L1",
-  timeoutMs: 20_000,
-  expectTemplate: [{ kind: "http_status", in: [200] }],
-  source: {
-    kind: "api",
-    operationId: "updateBilling",
-    method: "POST",
-    path: "/api/v1/billing",
-    pathParams: [],
-    queryParams: [],
-    bodyParams: ["line1"],
-  },
-};
+describe("the OpenAI request conversion", () => {
+  const request = toOpenAIRequest(buildPlannerRequest([{ role: "user", content: "Task text" }]));
 
-describe("the request conversion", () => {
-  it("keeps every compiled tool schema, without strict mode", () => {
-    const prefix = buildCachedPrefix({
-      productName: "Northwind",
-      stepBudget: 12,
-      groundedActionsEnabled: false,
-      procedure: null,
-      tools: [TOOL],
-    });
-    const tools = toOpenAITools(prefix.tools);
-    expect(tools).toHaveLength(1);
-    const tool = tools[0];
-    if (tool?.type !== "function") throw new Error("expected a function tool");
-    expect(tool.name).toBe(TOOL.name);
-    expect(tool.strict).toBe(false);
-    expect(tool.parameters).toEqual(prefix.tools[0]?.input_schema);
+  it("carries the frozen system prompt as instructions", () => {
+    expect(request.instructions).toBe(SYSTEM_PROMPT);
+    expect(request.model).toBe(OPENAI_PLANNER_MODEL);
+    expect(request.max_output_tokens).toBe(64_000);
+    expect(request.parallel_tool_calls).toBe(false);
+    expect(request.store).toBe(false);
   });
 
-  it("can emit strict function tools the way Anywhere v1 did", () => {
-    const tools = toOpenAITools(
-      [
-        {
-          name: "finish",
-          description: "End the turn",
-          input_schema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["outcome"],
-            properties: { outcome: { type: "string" } },
-          },
-        },
-      ],
-      { strict: true },
-    );
-    expect(tools[0]).toMatchObject({ type: "function", name: "finish", strict: true });
+  it("maps every agent tool to a strict function tool with its schema intact", () => {
+    const source = buildPlannerRequest([]).tools ?? [];
+    expect(request.tools).toHaveLength(source.length);
+    for (const [index, tool] of (request.tools ?? []).entries()) {
+      const original = source[index];
+      if (original === undefined || !("input_schema" in original) || tool.type !== "function") {
+        throw new Error("tool shape mismatch");
+      }
+      expect(tool.name).toBe(original.name);
+      expect(tool.strict).toBe(true);
+      expect(tool.parameters).toEqual(original.input_schema);
+    }
   });
 
   it("maps the turn history onto input items", () => {
-    const input = toOpenAIInput([
-      { role: "user", content: "Task text" },
-      {
-        role: "assistant",
-        content: [
-          { type: "text", text: "I will act." },
-          { type: "tool_use", id: "call_1", name: "api_update_billing", input: { a: 1 } },
-        ],
-      },
-      {
-        role: "user",
-        content: [
-          { type: "tool_result", tool_use_id: "call_1", content: "it failed", is_error: true },
-        ],
-      },
-    ]);
-    expect(input).toEqual([
+    const history = toOpenAIRequest(
+      buildPlannerRequest([
+        { role: "user", content: "Task text" },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "I will act.", citations: null },
+            {
+              type: "tool_use",
+              id: "call_1",
+              name: "page_action",
+              input: { a: 1 },
+              caller: { type: "direct" },
+            },
+          ],
+        },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: "call_1", content: "it failed", is_error: true },
+          ],
+        },
+      ]),
+    );
+    expect(history.input).toEqual([
       { type: "message", role: "user", content: "Task text" },
       { type: "message", role: "assistant", content: "I will act." },
-      { type: "function_call", call_id: "call_1", name: "api_update_billing", arguments: '{"a":1}' },
+      { type: "function_call", call_id: "call_1", name: "page_action", arguments: '{"a":1}' },
       { type: "function_call_output", call_id: "call_1", output: "[tool error] it failed" },
     ]);
   });
@@ -128,8 +98,10 @@ describe("the request conversion", () => {
         usage: USAGE,
       }),
     );
-    const replay = toOpenAIInput([{ role: "assistant", content: message.content }]);
-    expect(replay).toEqual([
+    const replay = toOpenAIRequest(
+      buildPlannerRequest([{ role: "assistant", content: message.content }]),
+    );
+    expect(replay.input).toEqual([
       {
         type: "reasoning",
         id: "rs_1",
@@ -141,12 +113,12 @@ describe("the request conversion", () => {
   });
 });
 
-describe("the response conversion", () => {
+describe("the OpenAI response conversion", () => {
   it("maps a function call to a tool_use block and stop_reason tool_use", () => {
     const message = fromOpenAIResponse(
       fakeResponse({
         output: [
-          { type: "function_call", call_id: "call_9", name: "api_update_billing", arguments: '{"x":"y"}' },
+          { type: "function_call", call_id: "call_9", name: "page_action", arguments: '{"x":"y"}' },
         ],
         usage: USAGE,
       }),
@@ -156,7 +128,7 @@ describe("the response conversion", () => {
       {
         type: "tool_use",
         id: "call_9",
-        name: "api_update_billing",
+        name: "page_action",
         input: { x: "y" },
         caller: { type: "direct" },
       },
@@ -166,7 +138,7 @@ describe("the response conversion", () => {
     expect(message.usage.output_tokens).toBe(40);
   });
 
-  it("maps a refusal part to stop_reason refusal", () => {
+  it("maps a refusal part to stop_reason refusal with refusal stop details", () => {
     const message = fromOpenAIResponse(
       fakeResponse({
         output: [
@@ -181,6 +153,7 @@ describe("the response conversion", () => {
       }),
     );
     expect(message.stop_reason).toBe("refusal");
+    expect(message.stop_details?.type).toBe("refusal");
   });
 
   it("maps output truncation to stop_reason max_tokens", () => {
@@ -211,19 +184,5 @@ describe("the response conversion", () => {
     );
     expect(message.stop_reason).toBe("end_turn");
     expect(message.content).toEqual([{ type: "text", text: "All done.", citations: null }]);
-  });
-});
-
-describe("jsonSchemaForOpenAI", () => {
-  it("strips $schema so structured output matches the Anywhere request", () => {
-    const schema = z.object({
-      suspicious: z.boolean(),
-      findings: z.array(z.string().max(200)).max(20),
-    });
-    const json = jsonSchemaForOpenAI(schema);
-    expect(json["$schema"]).toBeUndefined();
-    expect(json["$id"]).toBeUndefined();
-    expect(json["type"]).toBe("object");
-    expect(json["additionalProperties"]).toBe(false);
   });
 });

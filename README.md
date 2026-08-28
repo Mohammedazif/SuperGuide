@@ -50,7 +50,7 @@ packages/widget-ui   the chat surface, in a closed shadow root
 eval/                thirty task fixtures and the harness that scores them
 ```
 
-One process serves two clients. The widget uses `/v1`. The Chrome extension (still in the SuperGuide-Anywhere repo until the monorepo move) uses `/v1/anywhere`.
+One process serves two clients. The widget uses `/v1`. The Chrome extension (SuperGuide-Anywhere repo) uses `/v1/anywhere`. Step-by-step local setup: `LOCAL_TESTING.md`.
 
 ## Seeing it work
 
@@ -82,8 +82,9 @@ pnpm --filter @superguide/fixture-app run dev
 pnpm --filter @superguide/control-plane run dev
 ```
 
-Run `pnpm env:init` first. It writes `.env` from `.env.example` and generates the three
-signing and encryption keys, leaving the model provider key for you to fill in. Every
+Run `pnpm env:init` first. It writes `.env` from `.env.example` and generates the signing
+and encryption keys, leaving the model provider key for you to fill in. If the file
+already exists, the command exits without overwriting it — that is expected. Every
 variable is validated by a Zod schema at process start and the process exits non-zero if
 the environment is wrong.
 

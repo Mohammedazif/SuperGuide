@@ -6,7 +6,7 @@ import { createDatabase, withProduct } from "./db/client.js";
 import { EventBus } from "./anywhere/bus.js";
 import { loadAdapterDirectory } from "./anywhere/adapters-fs.js";
 import { TurnAgent } from "./anywhere/agent/loop.js";
-import { anywherePlan, anywhereScan } from "./anywhere/agent/bind.js";
+import { makeProvider as makeAnywhereProvider } from "./anywhere/agent/provider.js";
 import { TurnStore } from "./anywhere/store.js";
 import { QuotaService } from "./anywhere/quota.js";
 import { PostgresNotifier } from "./events/notifier.js";
@@ -49,18 +49,22 @@ await notifier.start();
 await recoverInFlightTurns(db, logger);
 
 const modelClient = makeModelClient(env);
+const anywhereProvider = env.SG_ANYWHERE_AGENT === "on" ? makeAnywhereProvider(env) : null;
 
 const anywhereAgent =
-  env.SG_ANYWHERE_AGENT === "on"
-    ? new TurnAgent({
+  anywhereProvider === null
+    ? null
+    : new TurnAgent({
         env,
         pool,
         store: new TurnStore(pool),
         quotas: new QuotaService(pool, env),
-        plan: anywherePlan(modelClient),
-        scan: anywhereScan(modelClient),
-      })
-    : null;
+        plan: (request) => anywhereProvider.plan(request),
+        scan: (strings) => anywhereProvider.scan(strings),
+      });
+if (anywhereAgent === null) {
+  logger.warn("anywhere agent loop is off; /v1/anywhere/task will accept turns and never plan");
+}
 
 const turnRunner = createAgentTurnRunner({
   env,

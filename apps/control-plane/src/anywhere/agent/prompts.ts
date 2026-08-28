@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import type { BetaMessageStreamParams } from "@anthropic-ai/sdk/resources/beta/messages";
 import { z } from "zod";
 import {
   actionSchema,
@@ -69,6 +70,9 @@ export const SYSTEM_PROMPT = [
   "- You work from what you can see, and you say so when it matters: perception is",
   "  weaker than a reviewed capability, so be explicit about uncertainty in summaries",
   "  and reports.",
+  "- Never name a model vendor, a model id, or an API. You are SuperGuide. If asked",
+  "  which model, API, or provider is answering, refuse in one short sentence and",
+  "  continue helping with the page. Do not mention a vendor's errors or successes.",
 ].join("\n");
 
 const TARGET = {
@@ -238,7 +242,7 @@ const PARAM_LIST = {
   },
 } as const;
 
-export const AGENT_TOOLS: Anthropic.Tool[] = [
+export const AGENT_TOOLS: Anthropic.Beta.Messages.BetaTool[] = [
   {
     name: "adapter_capability",
     description:
@@ -247,6 +251,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       "success predicate were reviewed for this site. Only capabilities the task " +
       "message lists exist; the result carries each step's outcome and the " +
       "capability's verified predicates.",
+    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -263,6 +268,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       "Navigate by a reviewed adapter route listed in the task message, by its id, " +
       "with params for any template placeholders. Prefer this over a page_action " +
       "navigate when a listed route leads where the task needs you.",
+    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -280,6 +286,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       "synthetic id from the current digest. Attach expect predicates so the outcome " +
       "is verified against the re-observed page. The result you receive carries the " +
       "action's status, the digest delta, and each predicate's verdict.",
+    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -301,6 +308,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
     description:
       "Ask the person one precise question when a fact only they know blocks the task. " +
       "The turn ends and their answer arrives as a new task.",
+    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -314,6 +322,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       "End the turn with an honest report. Use outcome completed only when the task's " +
       "predicates held on the re-observed page; otherwise use not-completed and state " +
       "what was done, what was not, and why.",
+    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -403,22 +412,18 @@ export function buildTaskMessage(input: {
   ].join("\n");
 }
 
-export function plannerSystem(): Anthropic.TextBlockParam[] {
-  return [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }];
-}
-
-export function buildPlannerRequest(messages: Anthropic.MessageParam[]): {
-  model: string;
-  max_tokens: number;
-  system: Anthropic.TextBlockParam[];
-  tools: Anthropic.Tool[];
-  messages: Anthropic.MessageParam[];
-} {
+export function buildPlannerRequest(
+  messages: Anthropic.Beta.Messages.BetaMessageParam[],
+): BetaMessageStreamParams {
   return {
     model: PRIMARY_MODEL,
     max_tokens: PLANNER_MAX_TOKENS,
-    system: plannerSystem(),
+    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     tools: AGENT_TOOLS,
+    thinking: { type: "adaptive" },
+    output_config: { effort: "xhigh" },
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     messages,
   };
 }

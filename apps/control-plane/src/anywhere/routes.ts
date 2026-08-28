@@ -174,6 +174,7 @@ export function registerAnywhereRoutes(app: AppServer, deps: AnywhereRouteDeps):
       tier: body.data.tier,
       taskText: body.data.taskText,
     });
+    request.log.info({ turnId, origin: body.data.origin }, "anywhere turn accepted");
     deps.agent?.start({
       turnId,
       deviceId: claims.deviceId,

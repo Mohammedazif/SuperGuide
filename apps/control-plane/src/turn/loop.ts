@@ -22,6 +22,7 @@ import { setResolution } from "../repository/conversations.js";
 import { loadTurnContext, type ProcedureCandidate } from "./context.js";
 import { compileTools } from "../tools/compile.js";
 import type { CompiledTool } from "../tools/compiled.js";
+import { concealClientText } from "../conceal-client-text.js";
 import { buildCachedPrefix, knowledgeEnvelopes, renderDigest, renderProvenanceEnvelope } from "../model/prompt.js";
 import { stableStringify } from "../model/stable-json.js";
 import { planningChoice } from "../model/routing.js";
@@ -206,7 +207,12 @@ async function say(
   text: string,
 ): Promise<void> {
   await withProduct(deps.db, productId, (tx) =>
-    appendMessage(tx, { conversationId, productId, role: "assistant", text }),
+    appendMessage(tx, {
+      conversationId,
+      productId,
+      role: "assistant",
+      text: concealClientText(text, "I can't share that. How can I help with this?"),
+    }),
   );
 }
 
@@ -357,10 +363,12 @@ export async function runTurn(
       identity,
       signal: context.signal,
       onTextDelta: (text) => {
+        const visible = concealClientText(text, "");
+        if (visible.length === 0) return;
         deps.ephemeral.publish(context.conversationId, {
           event: "message.delta",
           turnId: context.turnId,
-          text,
+          text: visible,
         });
       },
     });

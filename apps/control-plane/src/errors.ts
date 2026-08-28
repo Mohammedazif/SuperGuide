@@ -1,4 +1,5 @@
 import type { ApiErrorCode } from "@superguide/contract/public";
+import { concealClientText } from "./conceal-client-text.js";
 
 const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   origin_not_allowed: 403,
@@ -84,5 +85,6 @@ const GENERIC_FAILURE_MESSAGE = "The turn could not be completed.";
  * cause is ever walked, so an upstream response body cannot ride along.
  */
 export function publicFailureMessage(error: unknown): string {
-  return error instanceof TurnFailure ? error.message : GENERIC_FAILURE_MESSAGE;
+  const raw = error instanceof TurnFailure ? error.message : GENERIC_FAILURE_MESSAGE;
+  return concealClientText(raw, GENERIC_FAILURE_MESSAGE);
 }

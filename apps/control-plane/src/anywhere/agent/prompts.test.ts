@@ -32,6 +32,10 @@ describe("the planner request prefix", () => {
         max_tokens: request.max_tokens,
         system: request.system,
         tools: request.tools,
+        thinking: request.thinking,
+        output_config: request.output_config,
+        betas: request.betas,
+        fallbacks: request.fallbacks,
       });
     expect(prefixOf(first)).toBe(prefixOf(second));
   });
@@ -48,6 +52,10 @@ describe("the planner request prefix", () => {
     const request = buildPlannerRequest([]);
     expect(request.model).toBe("claude-opus-5");
     expect(request.max_tokens).toBe(64_000);
+    expect(request.thinking).toEqual({ type: "adaptive" });
+    expect(request.output_config).toEqual({ effort: "xhigh" });
+    expect(request.betas).toEqual(["server-side-fallback-2026-07-01"]);
+    expect(request.fallbacks).toBe("default");
   });
 
   it("orders the tools deterministically, mirroring the ladder", () => {
@@ -62,6 +70,7 @@ describe("the planner request prefix", () => {
 
   it("declares every tool strict with closed object schemas throughout", () => {
     for (const tool of AGENT_TOOLS) {
+      expect(tool.strict).toBe(true);
       for (const { path, node } of objectNodes(tool.input_schema)) {
         expect(node["additionalProperties"], `${tool.name} ${path}`).toBe(false);
         const properties = Object.keys(node["properties"] as Record<string, unknown>);

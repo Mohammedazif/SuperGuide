@@ -42,8 +42,8 @@ function toolUse(name: string, input: unknown): Anthropic.ToolUseBlockParam {
   return { type: "tool_use", id: `toolu_${randomUUID()}`, name, input };
 }
 
-function taskTextOf(messages: Anthropic.MessageParam[]): string {
-  const first = messages[0];
+function taskTextOf(messages: Anthropic.MessageParam[] | undefined): string {
+  const first = messages?.[0];
   const content = typeof first?.content === "string" ? first.content : "";
   const match = /^Task from the person: (.*)$/m.exec(content);
   if (match?.[1] === undefined) throw new Error("no task text in the first message");
@@ -189,8 +189,8 @@ beforeAll(async () => {
         pool,
         store: new TurnStore(pool),
         quotas: new QuotaService(pool, env),
-        plan: (messages) => {
-          const script = scripts.get(taskTextOf(messages));
+        plan: (request) => {
+          const script = scripts.get(taskTextOf(request.messages));
           const next = script?.shift();
           if (next === undefined) throw new Error("the test script is out of responses");
           return Promise.resolve(next);

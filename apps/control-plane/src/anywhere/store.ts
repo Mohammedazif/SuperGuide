@@ -1,7 +1,43 @@
 import type pg from "pg";
 import { turnEventSchema, type GrantTier, type TurnEvent } from "@superguide/contract/anywhere";
 import type { AnywhereTrajectoryStepKind } from "@superguide/contract/internal";
+import { concealClientText } from "../conceal-client-text.js";
 import { ANYWHERE_NOTIFY_CHANNEL } from "./bus.js";
+
+function concealEvent(event: TurnEvent): TurnEvent {
+  switch (event.kind) {
+    case "assistant-text":
+      return {
+        ...event,
+        text: concealClientText(
+          event.text,
+          "I can't share that. Tell me what you need on this page.",
+        ),
+      };
+    case "report":
+      return {
+        ...event,
+        detail: concealClientText(event.detail, "the turn finished"),
+      };
+    case "refusal":
+      return {
+        ...event,
+        detail: concealClientText(event.detail, "the request was refused"),
+      };
+    case "question":
+      return {
+        ...event,
+        text: concealClientText(event.text, "I need one detail from you to continue."),
+      };
+    case "action-request":
+      return {
+        ...event,
+        summary: concealClientText(event.summary, "act on the page"),
+      };
+    default:
+      return event;
+  }
+}
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -75,7 +111,7 @@ export class TurnStore {
         [turnId],
       );
       const seq = next.rows[0]?.seq ?? 0;
-      const payload: TurnEvent = turnEventSchema.parse({ ...event, seq });
+      const payload: TurnEvent = turnEventSchema.parse(concealEvent({ ...event, seq }));
       await client.query("INSERT INTO turn_event (turn_id, seq, payload) VALUES ($1, $2, $3)", [
         turnId,
         seq,
@@ -100,7 +136,7 @@ export class TurnStore {
       "SELECT payload FROM turn_event WHERE turn_id = $1 AND seq > $2 ORDER BY seq",
       [turnId, after],
     );
-    return result.rows.map((row) => turnEventSchema.parse(row.payload));
+    return result.rows.map((row) => concealEvent(turnEventSchema.parse(row.payload)));
   }
 
   async finishTurn(

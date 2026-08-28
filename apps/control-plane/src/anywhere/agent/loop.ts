@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Anthropic from "@anthropic-ai/sdk";
+import type { BetaMessageStreamParams } from "@anthropic-ai/sdk/resources/beta/messages";
 import type pg from "pg";
 import { expandRouteTemplate, resolveStepAction } from "@superguide/adapters";
 import {
@@ -18,6 +19,7 @@ import {
   pageDigestSchema,
 } from "@superguide/contract/anywhere";
 import { evaluateAnywherePolicy } from "@superguide/policy";
+import { describeError } from "../../errors.js";
 import type { Environment } from "../../env.js";
 import type { QuotaService } from "../quota.js";
 import type { TurnStore } from "../store.js";
@@ -26,6 +28,7 @@ import { envelopeDigest, envelopeObservation, extractPageStrings } from "./prove
 import {
   adapterInvocationSchema,
   askUserInputSchema,
+  buildPlannerRequest,
   buildTaskMessage,
   finishInputSchema,
   pageActionInputSchema,
@@ -54,7 +57,7 @@ export interface AgentDeps {
   pool: pg.Pool;
   store: TurnStore;
   quotas: QuotaService;
-  plan(messages: Anthropic.MessageParam[]): Promise<Anthropic.Message>;
+  plan(request: BetaMessageStreamParams): Promise<Anthropic.Beta.Messages.BetaMessage>;
   scan(strings: string[]): Promise<InjectionScan>;
   waits?: Partial<AgentWaits>;
 }
@@ -100,7 +103,8 @@ export class TurnAgent {
   start(input: TurnInput): void {
     void this.run(input)
       .catch(async (cause: unknown) => {
-        const message = cause instanceof Error ? cause.message : String(cause);
+        const message = describeError(cause);
+        process.stderr.write(`anywhere turn ${input.turnId} failed\n`);
         await this.deps.store.appendTrajectory(input.turnId, "error", { message });
         await this.deps.store.appendEvent(input.turnId, {
           kind: "report",
@@ -134,7 +138,7 @@ export class TurnAgent {
       writeConsent: false,
     };
 
-    const messages: Anthropic.MessageParam[] = [
+    const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [
       {
         role: "user",
         content: buildTaskMessage({
@@ -149,7 +153,7 @@ export class TurnAgent {
     ];
 
     for (let step = 0; step < env.SG_STEP_BUDGET; step += 1) {
-      const response = await this.deps.plan(messages);
+      const response = await this.deps.plan(buildPlannerRequest(messages));
       await store.appendTrajectory(input.turnId, "model-response", {
         stopReason: response.stop_reason,
         usage: {
@@ -202,7 +206,7 @@ export class TurnAgent {
       }
 
       const toolUses = response.content.filter(
-        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+        (block): block is Anthropic.Beta.Messages.BetaToolUseBlock => block.type === "tool_use",
       );
       if (toolUses.length === 0) {
         await this.endTurn(input, "needs-input");
@@ -210,7 +214,7 @@ export class TurnAgent {
       }
 
       messages.push({ role: "assistant", content: response.content });
-      const results: Anthropic.ToolResultBlockParam[] = [];
+      const results: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
       for (const toolUse of toolUses) {
         if (toolUse.name === "finish") {
           const finish = finishInputSchema.safeParse(toolUse.input);
@@ -298,7 +302,7 @@ export class TurnAgent {
   private async handlePageAction(
     input: TurnInput,
     digest: PageDigest | null,
-    toolUse: Anthropic.ToolUseBlock,
+    toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
     verification: Verification,
   ): Promise<ToolOutcome> {
     const { store } = this.deps;
@@ -438,7 +442,7 @@ export class TurnAgent {
   private async handleAdapterCapability(
     input: TurnInput,
     digest: PageDigest | null,
-    toolUse: Anthropic.ToolUseBlock,
+    toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
     verification: Verification,
   ): Promise<ToolOutcome> {
     const { store } = this.deps;
@@ -668,7 +672,7 @@ export class TurnAgent {
 
   private async handleAdapterRoute(
     input: TurnInput,
-    toolUse: Anthropic.ToolUseBlock,
+    toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
     verification: Verification,
   ): Promise<ToolOutcome> {
     const { store } = this.deps;
@@ -877,7 +881,7 @@ export class TurnAgent {
 function invalidInput(
   toolUseId: string,
   detail: string,
-): Anthropic.ToolResultBlockParam {
+): Anthropic.Beta.Messages.BetaToolResultBlockParam {
   return { type: "tool_result", tool_use_id: toolUseId, content: detail, is_error: true };
 }
 

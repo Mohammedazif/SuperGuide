@@ -2,11 +2,11 @@ import type Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import type {
   Response,
+  ResponseCreateParamsNonStreaming,
   ResponseInputItem,
   ResponseReasoningItem,
   Tool,
 } from "openai/resources/responses/responses";
-import type { ResponseStreamParams } from "openai/lib/responses/ResponseStream";
 import { z } from "zod";
 import { TurnFailure } from "../errors.js";
 import { CLASSIFICATION_MODEL, type EffortLevel } from "./routing.js";
@@ -26,6 +26,16 @@ export const OPENAI_CLASSIFICATION_MODEL = "gpt-5.4-mini";
 // selects this provider's classifier, anything else its planner.
 function modelFor(routed: string): string {
   return routed === CLASSIFICATION_MODEL ? OPENAI_CLASSIFICATION_MODEL : OPENAI_PLANNING_MODEL;
+}
+
+// Zod always stamps `$schema`. OpenAI structured outputs reject that keyword;
+// the Anywhere backend sent a handwritten schema without it. Leaving it in is
+// how a scan against gpt-5.4-mini sat until the SDK's 10-minute timeout.
+export function jsonSchemaForOpenAI(schema: z.ZodType): Record<string, unknown> {
+  const json = z.toJSONSchema(schema) as Record<string, unknown>;
+  delete json["$schema"];
+  delete json["$id"];
+  return json;
 }
 
 // "max" is not offered on every reasoning model; "xhigh" is the highest tier
@@ -115,13 +125,17 @@ export function toOpenAIInput(messages: Anthropic.MessageParam[]): ResponseInput
 // Compiled tool schemas may leave parameters optional, which strict mode
 // forbids; the loop already validates every tool call against the contract, so
 // schema following stays best-effort here rather than reshaping the schemas.
-export function toOpenAITools(tools: Anthropic.Tool[]): Tool[] {
+export function toOpenAITools(
+  tools: Anthropic.Tool[],
+  options?: { strict?: boolean },
+): Tool[] {
+  const strict = options?.strict ?? false;
   return tools.map((tool) => ({
     type: "function",
     name: tool.name,
     description: tool.description ?? null,
     parameters: tool.input_schema,
-    strict: false,
+    strict,
   }));
 }
 
@@ -137,7 +151,7 @@ function parsedArguments(raw: string): Record<string, unknown> {
 export function fromOpenAIResponse(response: Response): Anthropic.Message {
   const content: Anthropic.ContentBlock[] = [];
   const refusal = { seen: false };
-  for (const item of response.output) {
+  for (const item of response.output ?? []) {
     if (item.type === "reasoning") {
       content.push(stashReasoning(item));
     } else if (item.type === "message") {
@@ -181,8 +195,8 @@ export function fromOpenAIResponse(response: Response): Anthropic.Message {
     usage: {
       input_tokens: response.usage?.input_tokens ?? 0,
       output_tokens: response.usage?.output_tokens ?? 0,
-      cache_read_input_tokens: response.usage?.input_tokens_details.cached_tokens ?? 0,
-      cache_creation_input_tokens: response.usage?.input_tokens_details.cache_write_tokens ?? 0,
+      cache_read_input_tokens: response.usage?.input_tokens_details?.cached_tokens ?? 0,
+      cache_creation_input_tokens: response.usage?.input_tokens_details?.cache_write_tokens ?? 0,
       cache_creation: null,
       server_tool_use: null,
       service_tier: null,
@@ -211,6 +225,11 @@ function describeOpenAIError(error: unknown): Error {
   }
   if (error instanceof OpenAI.APIUserAbortError) {
     return new TurnFailure("turn_cancelled", "the turn was cancelled", { cause: error });
+  }
+  // Connection errors are APIError subclasses with no HTTP status. Matching
+  // APIError first produced "status undefined" on the stream.
+  if (error instanceof OpenAI.APIConnectionError) {
+    return new TurnFailure("model_unavailable", "the model could not be reached", { cause: error });
   }
   if (error instanceof OpenAI.APIError) {
     return new TurnFailure(
@@ -241,11 +260,14 @@ export class OpenAIModelClient implements ModelClient {
 
   async generate(request: GenerateRequest): Promise<GenerateResult> {
     const startedAt = this.#now();
-    const params: ResponseStreamParams = {
+    // Anywhere v1 used responses.create with strict function tools. The widget
+    // still streams so it can publish token deltas.
+    const streamText = request.onTextDelta !== undefined;
+    const params: ResponseCreateParamsNonStreaming = {
       model: modelFor(request.model),
       instructions: systemText(request.system),
       input: toOpenAIInput(request.messages),
-      tools: toOpenAITools(request.tools),
+      tools: toOpenAITools(request.tools, { strict: !streamText }),
       tool_choice: "auto",
       parallel_tool_calls: false,
       reasoning: { effort: reasoningEffortOf(request.effort) },
@@ -254,11 +276,9 @@ export class OpenAIModelClient implements ModelClient {
       include: ["reasoning.encrypted_content"],
     };
     try {
-      const stream = this.#client.responses.stream(params, { signal: request.signal });
-      stream.on("response.output_text.delta", (event) => {
-        request.onTextDelta?.(event.delta);
-      });
-      const response = await stream.finalResponse();
+      const response = streamText
+        ? await this.#streamResponse(params, request)
+        : await this.#client.responses.create(params, { signal: request.signal });
       const message = fromOpenAIResponse(response);
       return { message, usage: usageOf(message), latencyMs: this.#now() - startedAt };
     } catch (error) {
@@ -266,9 +286,24 @@ export class OpenAIModelClient implements ModelClient {
     }
   }
 
+  async #streamResponse(
+    params: ResponseCreateParamsNonStreaming,
+    request: GenerateRequest,
+  ): Promise<Response> {
+    const stream = this.#client.responses.stream(
+      { ...params, stream: true },
+      { signal: request.signal },
+    );
+    stream.on("response.output_text.delta", (event) => {
+      request.onTextDelta?.(event.delta);
+    });
+    return stream.finalResponse();
+  }
+
   async classify<Shape extends z.ZodType>(
     request: ClassifyRequest<Shape>,
   ): Promise<z.infer<Shape>> {
+    const schema = jsonSchemaForOpenAI(request.schema);
     let response: Response;
     try {
       response = await this.#client.responses.create(
@@ -277,17 +312,17 @@ export class OpenAIModelClient implements ModelClient {
           instructions: request.system,
           input: request.prompt,
           reasoning: { effort: reasoningEffortOf(request.effort) },
-          max_output_tokens: 4096,
+          max_output_tokens: 2048,
           store: false,
           text: {
             format: {
               type: "json_schema",
               name: "classification",
-              schema: z.toJSONSchema(request.schema),
-              strict: false,
+              schema,
+              strict: schema["additionalProperties"] === false,
             },
           },
-        },
+        } satisfies ResponseCreateParamsNonStreaming,
         { signal: request.signal },
       );
     } catch (error) {
