@@ -28,9 +28,7 @@ export function heuristicVerdict(content: string): InjectionVerdict | null {
   return OBVIOUS_INJECTION.test(content) ? "malicious" : null;
 }
 
-// Classification runs at index time. A fragment that cannot be classified stays unclassified,
-// and retrieval only ever returns fragments judged clean, so failure keeps content out of
-// context rather than letting it through.
+// Fail closed: unclassified fragments stay out of retrieval; only index-time clean is eligible.
 export class ModelInjectionClassifier implements InjectionClassifier {
   readonly #client: ModelClient;
   readonly #logger: AppLogger;

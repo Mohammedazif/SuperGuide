@@ -37,9 +37,7 @@ function appUrl(): string {
   return process.env["SG_DATABASE_URL"] ?? "postgres://sg_app:sg_app_dev@127.0.0.1:55432/superguide";
 }
 
-// A scripted turn cannot know a ref the observer minted in the browser. This resolves
-// {{ref:Accessible name}} against the digest the server most recently received, so a grounded
-// scenario can be written declaratively and still act on the real page.
+// Scripted turns cannot know observer-minted refs; {{ref:name}} is resolved from the latest digest.
 const REF_PLACEHOLDER = /\{\{ref:([^}]+)\}\}/g;
 
 function refsFromMessages(messages: readonly { content: unknown }[]): Map<string, string> {

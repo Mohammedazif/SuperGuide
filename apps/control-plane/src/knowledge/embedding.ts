@@ -20,9 +20,7 @@ function bucket(token: string, salt: string): { index: number; sign: number } {
   return { index, sign };
 }
 
-// The locked stack names one model provider, and that provider has no embedding endpoint.
-// This projection is deterministic, needs no network, and keeps retrieval testable. It is a
-// placeholder for a real embedding service, and swapping one in replaces this class only.
+// Locked stack has no embedding endpoint; this hashing projection is the local stand-in.
 export class HashingEmbeddingProvider implements EmbeddingProvider {
   readonly dimensions = EMBEDDING_DIMENSIONS;
 

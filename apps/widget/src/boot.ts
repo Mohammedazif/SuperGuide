@@ -53,7 +53,6 @@ function historyNavigator(view: Window): ExecutorNavigator {
   return {
     navigate(url: string) {
       const resolved = new URL(url, view.location.href).toString();
-      // A customer with a client-side router replaces this through setNavigate.
       view.location.assign(resolved);
     },
     currentUrl() {

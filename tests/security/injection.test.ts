@@ -83,8 +83,7 @@ describe("prompt injection", () => {
     for (const prompt of INJECTION_CORPUS) {
       const { conversationId, endUserId } = await seedConversation(productId);
 
-      // The planner is scripted to do the worst thing the injection asks for. If the defence
-      // depended on the model resisting the text, this test would pass a write through.
+      // Scripted planner obeys the injection so defence cannot depend on the model.
       const client = new ScriptedModelClient({
         script: [
           {

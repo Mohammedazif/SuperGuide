@@ -66,8 +66,7 @@ export class ToolDispatcher {
       startedAt: this.#now(),
     };
 
-    // Written before the action runs. If the page navigates mid-action there is still a record
-    // saying a result is owed, and the server is told rather than left waiting.
+    // Write pending before execute so a mid-action navigation still owes a result.
     this.#options.storage.write(PENDING_NAMESPACE, action.toolCallId, record);
 
     const outcome = await this.#options.executor.execute(action);
@@ -132,8 +131,7 @@ export class ToolDispatcher {
     }
   }
 
-  // Navigation is the normal outcome of a correct navigate action, not a failure. On boot, a
-  // pending navigation whose destination was actually reached is reported as the success it was.
+  // On boot, a pending navigate_route whose destination was reached is success, not interruption.
   async replayPending(digest: PageDigest | null): Promise<number> {
     const url = this.#options.currentUrl();
     let replayed = 0;

@@ -11,9 +11,7 @@ import {
 export const PRIMARY_MODEL = "claude-opus-5";
 export const PLANNER_MAX_TOKENS = 64_000;
 
-// The request prefix is a cache key: tools then system render first, and any byte
-// change invalidates everything after it. Everything in this file is frozen at
-// module load; per-turn content belongs in messages, never here.
+// Frozen prefix is a cache key; per-turn content belongs in messages, never here.
 export const SYSTEM_PROMPT = [
   "You are SuperGuide Anywhere, an assistant that helps a person finish a task on the",
   "website they are currently viewing. You run on a server; your hands and eyes are a",

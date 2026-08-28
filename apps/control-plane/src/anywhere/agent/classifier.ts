@@ -10,8 +10,7 @@ export const injectionScanSchema = z.object({
 });
 export type InjectionScan = z.infer<typeof injectionScanSchema>;
 
-// The same verdict schema, hand-written for providers whose structured output
-// takes a raw JSON schema rather than the zod helper.
+// Hand-written JSON schema for providers that cannot take the zod helper.
 export const INJECTION_SCAN_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,

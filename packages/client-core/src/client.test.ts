@@ -98,8 +98,6 @@ describe("a session that survives a navigation", () => {
     expect(store.getItem(`sg.${SESSION_NAMESPACE}.${PRODUCT}.current`)).not.toBeNull();
   });
 
-  // The defect this guards: after a navigation the widget opened a brand new anonymous session,
-  // so the new page was a different end user and an owed result could never be delivered.
   it("reuses the stored session after a navigation instead of becoming someone else", async () => {
     const first = build();
     await first.start();

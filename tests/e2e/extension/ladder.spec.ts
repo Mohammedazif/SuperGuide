@@ -52,9 +52,6 @@ async function settledStatus(turnId: string): Promise<string> {
   }
 }
 
-// Approves every confirmation the turn raises, by clicking the fixed decision
-// bar, until stopped. Confirmations already answered (a row in the confirmation
-// table) are not clicked again.
 function approveAll(turnId: string): { stop: () => void; askedOnce: () => boolean } {
   const state = { running: true, asked: false };
   const clicked = new Set<string>();

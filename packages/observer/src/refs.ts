@@ -1,5 +1,4 @@
-// Framework-generated identifiers change on re-render, so they are removed from the signature
-// a ref is minted from. A ref must survive a re-render or every stored reference is a lie.
+// Strip framework-generated ids so a minted ref survives a re-render.
 const VOLATILE_ID = /^(:r[0-9a-z]+:|react-aria-\d+|mui-\d+|headlessui-[\w-]+|radix-[\w-]+|v-[0-9a-f]{6,}|ember\d+|ng-\w+-\d+)$/i;
 const VOLATILE_FRAGMENT = /[0-9a-f]{8,}/i;
 

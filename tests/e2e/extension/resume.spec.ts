@@ -27,8 +27,7 @@ interface TurnRecord {
 }
 
 async function respondsQuickly(candidate: Worker): Promise<boolean> {
-  // Evaluating on a terminated worker hangs forever rather than rejecting, so liveness
-  // is decided by a race against a short timeout.
+  // Evaluating a terminated worker hangs forever instead of rejecting; race against a timeout.
   const probe = candidate
     .evaluate(() => 1)
     .then(

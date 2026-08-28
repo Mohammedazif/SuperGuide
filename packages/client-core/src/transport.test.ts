@@ -9,8 +9,7 @@ function transport(): Transport {
 }
 
 describe("the transport", () => {
-  // A browser sends no custom header on a CORS preflight, so a request that identifies its
-  // product only through x-sg-product-id can never get past one.
+  // CORS preflight has no custom headers, so productId cannot live only in x-sg-product-id.
   it("carries the product in the url as well as the header", () => {
     for (const path of ["/v1/session", "/v1/chat", "/v1/stream", "/v1/tool-result", "/v1/confirm"]) {
       const url = new URL(transport().url(path));

@@ -2,9 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { identityTierSchema } from "@superguide/contract/public";
 
-// Deliberately not a JWT. The product must be structurally incapable of minting a token
-// that a customer's API would accept for one of their users, so SuperGuide session tokens
-// carry no algorithm header and no issuer/audience claims a customer service would honour.
+// Not a JWT: no alg header or iss/aud a customer API would honour.
 const SESSION_TOKEN_PREFIX = "sgs1";
 
 export const sessionClaimsSchema = z.object({

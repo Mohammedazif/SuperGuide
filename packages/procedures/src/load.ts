@@ -17,8 +17,7 @@ export type LoadResult =
   | { ok: true; procedure: LoadedProcedure }
   | { ok: false; issues: ProcedureIssue[] };
 
-// An invalid procedure fails here and is never activated. Nothing partially applies a
-// procedure the support team did not write correctly.
+// Fail closed: an invalid procedure is never activated.
 export function loadProcedure(sourceYaml: string): LoadResult {
   let raw: unknown;
   try {

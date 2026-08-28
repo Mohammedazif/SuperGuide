@@ -5,8 +5,6 @@ import type { ClientState, SuperGuideClient } from "@superguide/client-core";
 export interface WidgetProps {
   client: SuperGuideClient;
   title: string;
-  // Controlled by the mount, so the open and close commands work on a widget that is already
-  // on the page rather than only at first render.
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

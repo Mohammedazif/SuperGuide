@@ -95,8 +95,7 @@ const LANDMARK_ROLES = new Set([
   "search",
 ]);
 
-// Not interactive, but the agent must be able to see them: these are what a page uses to say
-// a change landed, and an element_state check reads them.
+// Not interactive; the agent must see them so element_state can read a landed change.
 const OBSERVABLE_ROLES = new Set([
   "alert",
   "alertdialog",

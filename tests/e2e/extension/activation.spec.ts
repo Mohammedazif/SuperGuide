@@ -103,9 +103,7 @@ test("deactivation revokes the permission and removes the grant", async () => {
   await popup.getByTestId("deactivate").click();
   await expect(popup.getByTestId("activate")).toBeVisible();
   expect(await storedGrants()).toEqual([]);
-  // The staged e2e manifest holds the fixture hosts at install time, and Chrome refuses
-  // to remove install-time permissions — so revocation is observable here only through
-  // the grant record and the injection stopping, not through permissions.contains.
+  // Chrome refuses to drop install-time host permissions; observe revocation via grant + injection.
   await pageA.reload();
   await pageA.waitForTimeout(600);
   expect(await pageA.locator("#sga-root").count()).toBe(0);

@@ -22,14 +22,11 @@ import {
 export const GEMINI_PLANNING_MODEL = "gemini-2.5-pro";
 export const GEMINI_CLASSIFICATION_MODEL = "gemini-2.5-flash";
 
-// The routing table's model ids name roles, not vendors: the classification id
-// selects this provider's classifier, anything else its planner. Effort levels
-// have no analog on this family, so thinking stays at the model's own default.
+// Routed ids are roles, not vendors; this family has no effort analog, so thinking stays default.
 function modelFor(routed: string): string {
   return routed === CLASSIFICATION_MODEL ? GEMINI_CLASSIFICATION_MODEL : GEMINI_PLANNING_MODEL;
 }
 
-// Refusal-shaped finish reasons; anything here ends the turn without a usable message.
 const REFUSAL_FINISH = new Set([
   "SAFETY",
   "RECITATION",
@@ -56,9 +53,7 @@ function toolResultText(content: unknown): string {
   return "";
 }
 
-// Thought signatures must return with the part they were issued for, or the
-// model loses its reasoning thread across function calls. Each one rides the
-// turn history inside a thinking block and is re-attached to the next part.
+// Thought signatures must round-trip with their part or the model loses the reasoning thread.
 function encodeSignature(thoughtSignature: string | undefined): string {
   return thoughtSignature === undefined ? "{}" : JSON.stringify({ sig: thoughtSignature });
 }
@@ -72,8 +67,7 @@ function decodeSignature(signature: string): string | null {
   }
 }
 
-// A Gemini-issued call id must echo back verbatim while a synthetic one (made
-// only to satisfy the internal shape's binding) must not reach the API.
+// Echo Gemini-issued call ids verbatim; synthetic ids (internal binding) must not reach the API.
 function callIdFor(geminiId: string | undefined): string {
   return geminiId === undefined ? `s-${crypto.randomUUID()}` : `g-${geminiId}`;
 }
@@ -256,8 +250,6 @@ export class GeminiModelClient implements ModelClient {
     this.#now = options.now ?? (() => Date.now());
   }
 
-  // Text reaches the caller in one delta when the response completes; the
-  // streaming variant can replace this without touching the interface.
   async generate(request: GenerateRequest): Promise<GenerateResult> {
     const startedAt = this.#now();
     try {

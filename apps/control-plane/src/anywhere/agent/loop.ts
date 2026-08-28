@@ -74,10 +74,7 @@ interface ToolOutcome {
   digest: PageDigest | null;
 }
 
-// What the loop has actually seen hold on the page. A completion claim is
-// honoured only when nothing is standing failed: no failed predicate, and no
-// attempted action that failed, was refused, or went unverified since the last
-// clean one.
+// Completion is honoured only when no predicate or attempt is standing failed.
 interface Verification {
   lastVerified: string | null;
   lastFailedPredicate: ExpectPredicate | null;
@@ -222,8 +219,6 @@ export class TurnAgent {
             results.push(invalidInput(toolUse.id, finish.error.message));
             continue;
           }
-          // A completion claim is honoured only when no predicate is standing
-          // failed; otherwise the report is downgraded to what was verified.
           const honest =
             finish.data.outcome === "completed" &&
             (verification.lastFailedPredicate !== null || verification.lastAttemptFailed)
@@ -797,8 +792,7 @@ export class TurnAgent {
     input: TurnInput,
     predicate: ExpectPredicate,
   ): Promise<PageDigest | null> {
-    // A navigation can race the port teardown, losing one dispatched waitFor;
-    // a second attempt reaches the freshly injected content script.
+    // Navigation can race port teardown; a second waitFor reaches the new content script.
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const delivered = await this.dispatch(
         input,
@@ -885,10 +879,7 @@ function invalidInput(
   return { type: "tool_result", tool_use_id: toolUseId, content: detail, is_error: true };
 }
 
-// The policy consumes one action per verdict; a capability is authorised as a unit,
-// so its first step stands in. Only the action kind reaches a policy branch, and
-// the placeholder target never reaches the page: real targets are resolved per
-// step, against the live digest, after the verdict.
+// Policy authorises a capability via its first step; the placeholder never hits the page.
 function representativeAction(capability: AdapterCapability): AgentAction {
   const step = capability.steps[0];
   const placeholder = { id: "e00000000" };

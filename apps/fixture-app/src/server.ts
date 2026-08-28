@@ -9,8 +9,7 @@ import { z } from "zod";
 
 const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 
-// What a customer would actually write: no inline script, no eval, no relaxed style policy,
-// and their own agent endpoint allowed under connect-src. The widget needs nothing beyond this.
+// Customer-like CSP: no inline script/eval; connect-src is 'self' plus the agent origin.
 function strictCsp(apiOrigin: string | null): string {
   const connect = apiOrigin === null ? "'self'" : `'self' ${apiOrigin}`;
   return [
@@ -55,8 +54,7 @@ function cookieValue(header: string | string[] | undefined, name: string): strin
   return null;
 }
 
-// Test scaffolding: a real product has the script tag on every page it serves. Remembering the
-// pair lets a navigation keep the widget without threading query parameters through every link.
+// Cookie remembers product+API so navigations keep the widget without query params on every link.
 interface WidgetWiring {
   scriptUrl: string | null;
   productId: string | null;
@@ -273,7 +271,7 @@ export function buildFixtureApp(options: FixtureOptions = {}): FixtureApp {
     return reply.send(settings);
   });
 
-  // Deliberately absent from the OpenAPI document: this endpoint exists only behind the form.
+  // Absent from OpenAPI: this endpoint exists only behind the form.
   app.post<{ Params: { accountId: string } }>(
     "/internal-ui/accounts/:accountId/registration",
     (request, reply) => {

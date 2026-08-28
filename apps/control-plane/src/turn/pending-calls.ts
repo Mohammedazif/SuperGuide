@@ -71,9 +71,7 @@ export class PendingCalls {
     return this.#pending.has(toolCallId);
   }
 
-  // A dispatch is announced on an ephemeral channel, which only reaches connections attached at
-  // that moment. A client that attaches a moment later asks what is still outstanding, so an
-  // action cannot be lost to that race.
+  // Ephemeral dispatch misses late attachers; re-announce in-flight calls so they are not lost.
   outstandingFor(conversationId: string): InFlightCall[] {
     const found: InFlightCall[] = [];
     for (const entry of this.#pending.values()) {

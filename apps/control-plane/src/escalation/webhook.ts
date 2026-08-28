@@ -16,8 +16,7 @@ export type SignatureCheck =
   | { ok: true }
   | { ok: false; reason: "malformed" | "stale" | "mismatch" };
 
-// The receiver's half, exported so a customer can verify exactly the way this signs, and so the
-// five-minute window is a tested property rather than a paragraph of documentation.
+// Receiver verify matches signPayload; five-minute replay window is a tested property.
 export function verifyPayload(
   key: Buffer,
   headers: { signature: string | undefined; timestamp: string | undefined },
@@ -96,7 +95,7 @@ export class EscalationWebhook {
         attempts.push({ attempt, status: response.status, error: null });
         if (response.ok) return { status: "delivered", attempts };
 
-        // A four hundred class reply will not become correct by repeating it.
+        // 4xx except 429 is not retried; repeating will not make it succeed.
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
           return { status: "dead_letter", attempts };
         }

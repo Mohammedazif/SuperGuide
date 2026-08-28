@@ -8,8 +8,7 @@ export interface LiveProvider {
   key: string | null;
 }
 
-// The live suites run against whichever provider .env selects, gated on that
-// provider's key rather than always on the Anthropic one.
+// Gate on the .env-selected provider's key, not always Anthropic.
 export function liveProvider(): LiveProvider {
   const raw = process.env["SG_MODEL_PROVIDER"];
   const provider: LiveProviderName = raw === "openai" || raw === "gemini" ? raw : "anthropic";

@@ -102,7 +102,6 @@ export class PostgresNotifier implements DurableNotifier {
     await client.connect();
     await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
     this.#client = client;
-    this.#logger.debug("listening for durable row notifications");
   }
 
   #dispatch(notification: DurableNotification): void {

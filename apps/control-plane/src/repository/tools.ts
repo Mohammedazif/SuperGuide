@@ -10,9 +10,7 @@ export interface CapabilityRegistrationOutcome {
   awaitingReview: string[];
 }
 
-// A capability is named, typed, and risk-classed by the customer's own registration code.
-// It arrives disabled and a support lead enables it in the console; the model never decides
-// that a capability exists or what class it belongs to.
+// Customer-registered; arrive disabled until a lead enables them. The model never invents them.
 export async function registerCapabilities(
   tx: Transaction,
   productId: string,
@@ -51,8 +49,7 @@ export async function registerCapabilities(
       continue;
     }
 
-    // jsonb does not preserve key order, so a plain stringify would report a change on every
-    // registration and keep a reviewed capability permanently disabled.
+    // jsonb key order is unstable; plain stringify looks like a change, disabling reviewed tools.
     const changed =
       found.riskClass !== descriptor.risk ||
       stableStringify(found.definition) !== stableStringify(definition);

@@ -1,6 +1,4 @@
-// Writes .env from .env.example, generating a fresh value for every key the example
-// leaves blank. The example ships blank because a signing key committed to a repository
-// is a signing key everybody has; this script is the reason that costs nobody any effort.
+// .env.example leaves signing keys blank; a committed key is a key everybody has.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -45,8 +43,6 @@ writeFileSync(TARGET, output, { mode: 0o600 });
 
 process.stdout.write(`Wrote .env with ${filled.length} generated keys: ${filled.join(", ")}\n`);
 
-// Anything still blank needs a human. Say so by name rather than letting the server
-// fail at boot with a schema error the reader has to map back to a file.
 const blank = output.split("\n").flatMap((line) => /^([A-Z0-9_]+)=$/.exec(line)?.[1] ?? []);
 
 if (blank.length > 0) {

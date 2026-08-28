@@ -31,8 +31,7 @@ const RULES = [
     id: "csp-manipulation",
     description: "Any read or write of a Content-Security-Policy header",
     pattern: /content-security-policy/i,
-    // apps/fixture-app stands in for a customer's own site. It serves a strict policy so the
-    // widget can be proved to work under one. The product itself never touches the header.
+    // fixture-app is a stand-in customer site; the product itself must never touch the CSP header.
     exclude: [/^apps\/fixture-app\//],
   },
   {

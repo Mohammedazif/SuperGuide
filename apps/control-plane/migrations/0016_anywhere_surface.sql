@@ -1,6 +1,4 @@
--- Untentanted device surface for the Chrome extension. These tables are
--- intentionally outside product RLS: a device is not an end_user.
--- Query them outside withProduct(); never ENABLE ROW LEVEL SECURITY here.
+-- Never ENABLE RLS: untenanted device surface, not an end_user; query outside withProduct().
 
 CREATE TABLE device (
   id uuid PRIMARY KEY,

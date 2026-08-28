@@ -104,8 +104,7 @@ export function previewFor(action: AgentAction): string {
   }
 }
 
-// Pure. No I/O, no clock, no randomness. The first matching rule wins and the order is the
-// order in the specification.
+// Pure. No I/O, no clock, no randomness. First matching rule wins; order is the specification.
 export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
   const descriptor = describeAction(input.action, input.toolName);
 

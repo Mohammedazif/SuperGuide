@@ -242,8 +242,7 @@ export async function runTurn(
     secret,
   );
 
-  // Untrusted page or knowledge content is always in this turn's context, so the guard refuses
-  // any credential that is not the product's own service account.
+  // Page/knowledge is untrusted; only the product's service account credential is permitted.
   assertCredentialPermitted("product_service_account", true);
   const secretValues = signer.secretValues();
   const allowedFieldNames = loaded.product.redactionAllowlist.fieldNames;
@@ -723,8 +722,7 @@ export function createTurnExecutor(deps: LoopDependencies) {
           closeConversation: true,
         };
       }
-      // Authored TurnFailure messages are already safe to publish. Wrap only
-      // unexpected errors so a provider body cannot ride out on the turn.
+      // Wrap unexpected errors so a provider body cannot ride out on the turn.
       if (error instanceof TurnFailure) throw error;
       deps.logger.error({ err: error, turnId: context.turnId }, "the turn could not be run");
       throw new TurnFailure("turn_failed", "The turn could not be completed.", {

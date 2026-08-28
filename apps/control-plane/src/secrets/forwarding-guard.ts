@@ -4,9 +4,7 @@ export class ForwardedCredentialRefused extends Error {
   override readonly name = "ForwardedCredentialRefused";
 }
 
-// R28 and section 11.2: a forwarded end-user credential must not be held while untrusted page
-// content is in context, until the injection posture has passed an adversarial evaluation.
-// This is a guard rather than a convention so the constraint cannot be lost in a later edit.
+// R28: forwarded end-user credentials stay refused until injection posture is evaluated.
 export const INJECTION_POSTURE_ADVERSARIALLY_EVALUATED: boolean = false;
 
 export function assertCredentialPermitted(

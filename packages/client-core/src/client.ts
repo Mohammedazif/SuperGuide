@@ -42,8 +42,7 @@ export interface ClientOptions {
   currentDigest: () => PageDigest | null;
   currentUrl: () => string;
   onLog?: (message: string, detail?: unknown) => void;
-  // The host page cannot see inside a closed shadow root, so lifecycle is announced as
-  // sg: events it can listen for. Content stays inside the widget.
+  // Closed shadow root: host hears sg: events; widget content stays inside.
   onNotify?: (name: string, detail: Record<string, unknown>) => void;
 }
 
@@ -123,8 +122,7 @@ export class SuperGuideClient {
     for (const listener of [...this.#listeners]) listener(this.#state);
   }
 
-  // A navigation destroys the page but not the work. The session and the conversation are kept
-  // so the same end user comes back after a page load and an owed result can still be delivered.
+  // Session and conversation survive navigation so the same user and owed results come back.
   #restoreSession(): boolean {
     const stored = this.#options.storage.read<StoredSession>(SESSION_NAMESPACE, "current");
     if (stored === null) return false;
@@ -217,8 +215,6 @@ export class SuperGuideClient {
     return true;
   }
 
-  // A host page may ask before the session has opened. Holding the message is the difference
-  // between a request that is answered late and one that vanishes.
   async send(message: string): Promise<void> {
     if (this.#state.status === "opening" || this.#state.status === "idle") {
       this.#queuedMessage = message;

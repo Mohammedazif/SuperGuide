@@ -31,8 +31,6 @@ function labelFor(element: Element): string {
   return "";
 }
 
-// The order is the one the specification fixes: an associated label, then aria-label, then
-// aria-labelledby, then title, then placeholder, then the name attribute.
 export function accessibleName(element: Element): string {
   const associated = labelFor(element);
   if (associated.length > 0) return associated;

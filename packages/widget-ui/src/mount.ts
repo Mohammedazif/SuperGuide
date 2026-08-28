@@ -18,9 +18,7 @@ export interface MountedWidget {
   unmount(): void;
 }
 
-// A closed shadow root, so the host page cannot restyle the widget and the widget cannot leak
-// styles into the host page. Styles go in a constructed stylesheet rather than an inline style
-// element, which is what lets this work under a strict host policy without touching it.
+// Closed shadow root + constructed stylesheet: host CSP stays untouched.
 export function mountWidget(options: MountOptions): MountedWidget {
   const target = options.document ?? document;
   const existing = target.getElementById(SHADOW_HOST_ID);

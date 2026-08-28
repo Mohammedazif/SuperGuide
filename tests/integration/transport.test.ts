@@ -69,8 +69,6 @@ describe("turn transport", () => {
     const body = (await response.json()) as { turnId: string; conversationId: string };
     expect(body.turnId).toMatch(/^[0-9a-f-]{36}$/);
 
-    // The turn this harness runs takes fifty milliseconds. It is still going when the reply
-    // has already been read, which is the property: the request never waits on the model.
     expect(harness.deps.turnRunner.activeTurnCount()).toBeGreaterThan(0);
     await harness.deps.turnRunner.drain(10_000);
   });

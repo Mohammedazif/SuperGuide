@@ -47,9 +47,7 @@ export class OnboardingFailure extends Error {
   override readonly name = "OnboardingFailure";
 }
 
-// Onboarding is data, not code: a published OpenAPI document and a route table are enough to
-// give an agent a product's whole level-one and level-three surface. Every discovered tool
-// arrives disabled and is reviewed in the console before it can be called.
+// Discovered tools arrive disabled; a person must enable them before they can be called.
 export async function onboardProduct(
   tx: Transaction,
   input: OnboardInput,

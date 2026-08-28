@@ -3,9 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-// src/env.ts and dist/env.js are both two levels below apps/control-plane, which is
-// one level below the repo root. pnpm --filter runs with cwd at the package, so Node's
-// --env-file=.env would miss the file written by `pnpm env:init`.
+// Repo-root .env: src/dist sit two levels down; pnpm --filter cwd misses --env-file=.env.
 const REPO_ROOT_ENV = join(dirname(fileURLToPath(import.meta.url)), "../../../.env");
 
 function loadRepoDotEnv(): void {

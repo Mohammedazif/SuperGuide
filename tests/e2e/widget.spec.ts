@@ -15,10 +15,7 @@ declare global {
   }
 }
 
-// The widget lives in a closed shadow root, which is opaque to the automation API by design.
-// Every assertion here is therefore made on what a host page can genuinely observe: the sg:
-// events the widget announces, the handlers it calls, the pages it navigates to, and the
-// customer's own API state.
+// Closed shadow root is opaque to the automation API; assert only host-visible surfaces.
 async function recordEvents(page: Page): Promise<void> {
   await page.addInitScript(() => {
     window.__sgEvents = [];
@@ -64,9 +61,7 @@ async function events(page: Page): Promise<RecordedEvent[]> {
   return page.evaluate(() => window.__sgEvents ?? []);
 }
 
-// The confirmation lives inside the closed shadow root, where the automation API cannot reach.
-// The approve button takes focus when it appears, so the keyboard drives it exactly as a person
-// would, which also exercises the requirement that the flow is completable without a mouse.
+// Confirmation is in a closed shadow root; keyboard (autofocused approve) is the only driver.
 async function waitForConfirmation(page: Page): Promise<RecordedEvent> {
   await page.waitForFunction(
     () => (window.__sgEvents ?? []).some((entry) => entry.name === "confirm"),
@@ -165,8 +160,7 @@ test.describe("the widget in a real browser", () => {
     expect(finished.detail["resolutionState"]).toBe("resolved");
     expect(String(finished.detail["summary"])).toContain("growth plan");
 
-    // turn-started is best effort: it reaches only connections attached when it is published.
-    // The durable message and the settled turn state are the guarantees, and both are asserted.
+    // turn-started is best-effort to live connections; durable message + settled state asserted.
     const recorded = await events(page);
     expect(
       recorded.some(
@@ -252,7 +246,7 @@ test.describe("the widget in a real browser", () => {
     await page.waitForURL(/\/settings\/billing/, { timeout: 25_000 });
     await expect(page.getByRole("heading", { name: "Billing address" })).toBeVisible();
 
-    // The page that dispatched the action is gone. Nothing may be left owing a result.
+    // Dispatcher page is gone; nothing may remain owing a result.
     await waitForWidget(page);
     await page.waitForFunction(
       () => Object.keys(localStorage).filter((key) => key.startsWith("sg.pending.")).length === 0,

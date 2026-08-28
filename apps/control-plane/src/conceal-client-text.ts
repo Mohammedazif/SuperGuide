@@ -1,5 +1,4 @@
-// Strings a person can read must never name a vendor, a model id, or an API.
-// Planner instructions also forbid it; this is the belt if the model ignores that.
+// Client-visible strings must never name a vendor, model id, or API.
 
 const MODEL_OR_VENDOR =
   /\b(?:open\s*ai|chatgpt|chat\s*gpt|anthropic|claude(?:[-\s][\w.]+)?|gemini(?:[-\s][\w.]+)?|google\s*ai(?:\s*studio)?|gpt-[\w.]+|o3(?:-mini)?)\b/gi;

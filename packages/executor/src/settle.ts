@@ -11,8 +11,7 @@ const WATCHED_ATTRIBUTES = [
 
 export const DEFAULT_SETTLE: SettleOptions = { quietPeriodMs: 120, ceilingMs: 3000 };
 
-// After a mutating action the page is given a quiet period to finish reacting, with an overall
-// ceiling so a page that never stops moving cannot hold a turn open.
+// Quiet period after mutations; ceiling so a never-settling page cannot hold a turn open.
 export function waitForSettle(
   document: Document,
   options: SettleOptions = DEFAULT_SETTLE,

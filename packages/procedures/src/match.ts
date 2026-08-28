@@ -26,9 +26,7 @@ export interface MatchDecision {
   confidence: number;
 }
 
-// The shortlist is a model judgement. Everything after it is deterministic: preconditions
-// that hold, then confidence, then version, then slug. The same inputs always give the
-// same answer, which is what makes the matcher testable against recorded transcripts.
+// Deterministic after the model shortlist so the same inputs always pick the same procedure.
 export function tieBreak(input: TieBreakInput): MatchDecision | null {
   const bySlug = new Map(input.candidates.map((candidate) => [candidate.slug, candidate]));
 

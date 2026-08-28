@@ -9,8 +9,6 @@ export interface ModelChoice {
 }
 
 export const MODEL_ROUTING = {
-  // Effort escalates on failure rather than upfront, so intelligence is paid for only where
-  // the task proved hard.
   planning: { model: PLANNING_MODEL, effort: "high" } as ModelChoice,
   recovery: { model: PLANNING_MODEL, effort: "xhigh" } as ModelChoice,
   expectAdjudication: { model: PLANNING_MODEL, effort: "medium" } as ModelChoice,

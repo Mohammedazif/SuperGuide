@@ -37,8 +37,7 @@ function stubClient(): SuperGuideClient {
 }
 
 function panelExists(): boolean {
-  // A closed shadow root is unreachable from the page, so the mount is inspected through the
-  // one handle a test legitimately has: the host element's own shadow root reference is null.
+  // Closed shadow is unreachable; host.shadowRoot === null is the only page-visible handle.
   const host = document.getElementById(SHADOW_HOST_ID);
   return host !== null && host.shadowRoot === null;
 }
@@ -59,8 +58,7 @@ describe("mounting the widget", () => {
     document.body.innerHTML = "";
     const widget = mountWidget({ client: stubClient(), document, initiallyOpen: false });
 
-    // The defect this guards: the open state was seeded from a prop, so open() on a mounted
-    // widget re-rendered with the same initial value and nothing happened.
+    // Open was seeded from a prop; a second open() re-rendered the initial value and no-op'd.
     expect(() => {
       widget.open();
       widget.open();

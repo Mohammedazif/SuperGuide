@@ -92,7 +92,6 @@ export class AnthropicModelClient implements ModelClient {
       });
       usage = addUsage(usage, readUsage(message.usage));
 
-      // A paused turn is continued by appending the assistant turn and asking again.
       if (message.stop_reason === "pause_turn") {
         messages.push({ role: "assistant", content: message.content });
         continue;

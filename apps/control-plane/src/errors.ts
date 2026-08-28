@@ -63,12 +63,7 @@ export class TurnFailure extends Error {
   }
 }
 
-/**
- * The full cause chain, for logs only. A cause is frequently a provider SDK
- * error whose message embeds the upstream status and response body, so this
- * must never reach a payload a browser can read. Use publicFailureMessage
- * for anything published.
- */
+// Logs only: never put this cause chain on a browser-readable payload.
 export function describeError(error: unknown): string {
   if (error instanceof Error) {
     const cause = error.cause;
@@ -79,11 +74,7 @@ export function describeError(error: unknown): string {
 
 const GENERIC_FAILURE_MESSAGE = "The turn could not be completed.";
 
-/**
- * The failure text that is safe to publish. Every TurnFailure message is an
- * authored, provider-neutral string; anything else is replaced wholesale. No
- * cause is ever walked, so an upstream response body cannot ride along.
- */
+// Publish-safe: TurnFailure only; never walk causes (provider bodies stay off the wire).
 export function publicFailureMessage(error: unknown): string {
   const raw = error instanceof TurnFailure ? error.message : GENERIC_FAILURE_MESSAGE;
   return concealClientText(raw, GENERIC_FAILURE_MESSAGE);

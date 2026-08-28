@@ -20,8 +20,7 @@ export function strongestRisk(candidates: readonly RiskClass[]): RiskClass {
   return strongest;
 }
 
-// The tool definition assigns the class, never the model. A DELETE is destructive whatever
-// the planner believes it is doing.
+// Risk class comes from the tool definition, never the model; DELETE is always destructive.
 export function riskForOperation(
   method: HttpMethod,
   path: string,

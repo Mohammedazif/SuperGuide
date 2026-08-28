@@ -70,7 +70,7 @@ export class WebhookEscalationSink implements EscalationSink {
       },
       transcript,
       trajectory: steps,
-      // Only what a check actually confirmed is reported as known.
+      // knownTrue is only steps a check actually confirmed.
       knownTrue: steps
         .filter((step) => step.expectOutcome.satisfied)
         .map((step) => `${step.action.intent} — ${step.expectOutcome.detail}`),
@@ -98,8 +98,7 @@ export class WebhookEscalationSink implements EscalationSink {
 
     const result = await webhook.deliver(payload);
     if (result.status === "dead_letter") {
-      // The dead letter lives in the trajectory rather than in a twelfth table: the run it
-      // belongs to is exactly where a support lead will look for it.
+      // Dead-letter stays in this log and the trajectory, not a separate table.
       this.#options.logger.error(
         { escalationId: payload.escalationId, attempts: result.attempts },
         "escalation dead letter",

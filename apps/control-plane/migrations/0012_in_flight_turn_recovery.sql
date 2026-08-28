@@ -1,6 +1,4 @@
--- Startup recovery must find interrupted turns across every product before any product
--- scope exists. This is the only cross-product read the application role can perform, it
--- returns identifiers rather than content, and it exists so no turn is ever left hanging.
+-- Only sg_app cross-product read: identifiers, not content, before product scope exists.
 CREATE FUNCTION sg_list_in_flight_turns()
 RETURNS TABLE (product_id uuid, conversation_id uuid, turn_id uuid)
 LANGUAGE sql

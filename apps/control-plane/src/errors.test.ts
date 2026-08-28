@@ -3,12 +3,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { TurnFailure, describeError, publicFailureMessage } from "./errors.js";
 import { describeModelError } from "./model/client.js";
 
-/**
- * A provider error carries the upstream response body in its own message. It
- * is attached as a cause so it reaches the logs, and must not travel any
- * further than that: turn.failed is a public event a browser can read off the
- * wire, so the model behind the product would otherwise be named in it.
- */
 function providerError(): InstanceType<typeof Anthropic.APIError> {
   return new Anthropic.APIError(
     404,

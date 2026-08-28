@@ -3,9 +3,7 @@ import type { GenerateRequest, GenerateResult, ModelClient } from "@superguide/c
 
 const PLACEHOLDER = /\{\{ref:([^}]+)\}\}/g;
 
-// A recorded transcript cannot know a ref the observer mints at run time, so a task names the
-// element by its accessible name and the ref is looked up in the live digest. The task fixture
-// stays readable and the action still acts on the real element.
+// Transcripts name elements; observer refs are minted at runtime and resolved from the live digest.
 export class RefResolvingModelClient implements ModelClient {
   readonly #inner: ModelClient;
   readonly #digest: () => PageDigest;

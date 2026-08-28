@@ -5,9 +5,7 @@ type ElementConstructorName =
   | "HTMLIFrameElement"
   | "HTMLElement";
 
-// A same-origin iframe is a different realm, so its elements are not instances of the top
-// window's constructors. Resolving the constructor from the element's own view is what makes
-// traversal into a frame work at all, and it is also what lets this run outside a browser.
+// Iframe elements are a different realm; resolve constructors from the element's own view.
 export function isElementOfType(value: unknown, name: ElementConstructorName): boolean {
   if (typeof value !== "object" || value === null) return false;
 

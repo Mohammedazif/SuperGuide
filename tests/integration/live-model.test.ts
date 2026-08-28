@@ -9,8 +9,7 @@ import { LIVE_MODEL_REASON, liveProvider } from "../helpers/live.js";
 const live = liveProvider();
 const apiKey = live.key;
 
-// Gemini is excluded: its implicit caching makes no per-request read guarantee,
-// so the cache assertion has nothing honest to hold on to.
+// Gemini is excluded: implicit caching has no per-request read guarantee.
 function liveClient(key: string): ModelClient | null {
   if (live.provider === "anthropic") return new AnthropicModelClient({ apiKey: key });
   if (live.provider === "openai") return new OpenAIModelClient({ apiKey: key });

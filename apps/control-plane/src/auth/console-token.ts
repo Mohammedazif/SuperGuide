@@ -1,9 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
-// A different prefix from a widget session token, carried in a cookie rather than a bearer
-// header. A widget token can never be presented here and a console token can never be
-// presented to a widget route.
+// Distinct prefix from widget tokens: neither can be presented on the other route.
 const CONSOLE_TOKEN_PREFIX = "sgc1";
 export const CONSOLE_COOKIE = "sg_console";
 

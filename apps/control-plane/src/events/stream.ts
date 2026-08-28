@@ -64,8 +64,7 @@ export class ConversationStream {
     return this.#lastSentSeq;
   }
 
-  // Read through methods: TypeScript keeps narrowing a private field across await, and these
-  // flags are changed by close() and by notification handlers while a drain is suspended.
+  // Read via methods: TS narrows a private field across await; close/handlers mutate during drain.
   #isClosed(): boolean {
     return this.#closed;
   }
@@ -115,9 +114,6 @@ export class ConversationStream {
     }
   }
 
-  // An ephemeral turn.finished only reaches connections that were attached when it was
-  // published. A client that connects after a fast turn would otherwise wait forever, so the
-  // settled state is read from the database and announced once on connect.
   #announceOutstandingConfirmations(): void {
     const outstanding = this.#options.outstandingConfirmations;
     if (outstanding === undefined || this.#isClosed()) return;
@@ -126,6 +122,7 @@ export class ConversationStream {
     }
   }
 
+  // Ephemeral turn.finished is missable; replay settled state from DB once on connect.
   async #announceSettledTurn(): Promise<void> {
     const lifecycle = this.#options.lifecycle;
     if (lifecycle === undefined || this.#isClosed()) return;

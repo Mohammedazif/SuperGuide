@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { redact, REDACTED } from "./redact.js";
 import { createRequestSigner, sealCredentials } from "./credentials.js";
 
-// Every value below is assembled at runtime from ordinary words. That is deliberate: the
-// redactor keys off field names, off the secret values its caller declares, and off the
-// Bearer and Basic grammars — never off how entropic a value looks. So the corpus needs no
-// realistic-looking credential to exercise it, and writing one would only teach secret
-// scanners to raise an incident against a test file forever.
+// Join ordinary words at runtime; never write a realistic-looking credential in this file.
 const KEY = Buffer.alloc(32, 5);
 
 const SECRET = ["not", "a", "real", "credential", "0123456789abcdef"].join("-");
@@ -16,7 +12,6 @@ const CARD_NUMBER = ["not", "a", "real", "card", "number"].join("-");
 const USERNAME = "dana";
 const BASIC = Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64");
 
-// Values that must never survive redaction, whatever route they took through the tree.
 const CANARIES = [SECRET, PASSWORD, SESSION_VALUE, CARD_NUMBER];
 
 const CORPUS: { name: string; input: unknown }[] = [
@@ -124,7 +119,7 @@ describe("the request signer", () => {
     signer.applyTo(headers);
     expect(headers.get("authorization")).toBe(`Bearer ${SECRET}`);
 
-    // The only thing that leaves is the set of values the redactor must strip.
+    // secretValues is only for the redactor to strip.
     expect(signer.secretValues()).toContain(SECRET);
     expect(Object.keys(signer)).toEqual([]);
     expect(JSON.stringify(signer)).not.toContain(SECRET);

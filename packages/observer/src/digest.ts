@@ -39,8 +39,7 @@ function inViewport(element: Element): boolean {
   const rect = element.getBoundingClientRect();
   const height = view.innerHeight;
   const width = view.innerWidth;
-  // A layout engine that reports nothing (a headless document) is treated as in view rather
-  // than silently dropping every element from the digest.
+  // Headless layout (0×0 at origin) counts as in-view so elements are not silently dropped.
   if (rect.width === 0 && rect.height === 0 && rect.top === 0 && rect.left === 0) return true;
   return rect.bottom > 0 && rect.right > 0 && rect.top < height && rect.left < width;
 }
@@ -75,8 +74,7 @@ function isPasswordField(element: Element): boolean {
   return input !== null && input.type === "password";
 }
 
-// Values are omitted by default. A value appears only when the product's own allowlist names
-// the field, and a password field never appears under any configuration.
+// Password values never emit; other values only if the product allowlist names the field.
 function valueOf(element: Element, allowlist: ReadonlySet<string>): string | undefined {
   if (isPasswordField(element)) return undefined;
   const field = asInput(element) ?? asTextArea(element) ?? asSelect(element);

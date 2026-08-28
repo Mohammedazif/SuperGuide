@@ -79,8 +79,7 @@ describe("regressions", () => {
     return ((await response.json()) as { sessionToken: string }).sessionToken;
   }
 
-  // A browser sends no custom header on a preflight, so the product has to be resolvable from
-  // the url alone or every cross-origin request fails before it is ever made.
+  // Preflight carries no custom header, so the product must be resolvable from the URL.
   it("answers a CORS preflight that carries no custom header", async () => {
     const response = await fetch(`${harness.baseUrl}/v1/session?productId=${productId}`, {
       method: "OPTIONS",
@@ -110,8 +109,6 @@ describe("regressions", () => {
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
 
-  // The dispatch is announced on an ephemeral channel. A client that attaches a moment later
-  // used to never hear about it, and the turn waited on a result nobody had been asked for.
   it("re-announces an outstanding browser call to a stream that attaches afterwards", async () => {
     const token = await openSession();
     const chat = await fetch(`${harness.baseUrl}/v1/chat?productId=${productId}`, {
@@ -198,7 +195,6 @@ describe("regressions", () => {
     await stream.closed;
   });
 
-  // The loop writes what the person reads. The runner used to append it a second time.
   it("writes the closing message exactly once through the full runner", async () => {
     const { conversationId, endUserId } = await seedConversation(productId);
     const ephemeral = new EphemeralBus();
@@ -263,8 +259,7 @@ describe("regressions", () => {
     expect(assistantMessages).toEqual(["You are on the growth plan."]);
   });
 
-  // jsonb does not preserve key order, so comparing it with a plain stringify reported a change
-  // every time and a reviewed capability was disabled again on every page load.
+  // jsonb does not preserve key order; a plain stringify would re-disable an unchanged capability.
   it("keeps a reviewed capability enabled when it is registered again unchanged", async () => {
     const descriptor = {
       name: "highlight_invoice",
@@ -288,9 +283,6 @@ describe("regressions", () => {
       await client.end();
     }
 
-    // The identical declaration, registered again exactly as the page would on its next load.
-    // PostgreSQL stores jsonb with its own key order, so the stored copy and a freshly built
-    // one differ under a plain stringify even though nothing about the capability changed.
     const outcome = await withProduct(database.db, productId, (tx) =>
       registerCapabilities(tx, productId, [descriptor]),
     );
@@ -333,7 +325,6 @@ describe("regressions", () => {
     expect(enabled.rows[0]?.enabled).toBe(false);
   });
 
-  // Every compiled tool must fit the action envelope, which caps how long a step may wait.
   it("compiles no tool whose timeout the action envelope would refuse", async () => {
     const loaded = await withProduct(database.db, productId, (tx) =>
       loadTurnContext(tx, productId, randomUUID()),

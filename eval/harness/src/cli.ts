@@ -80,8 +80,7 @@ async function main(): Promise<void> {
     await harness.close();
   }
 
-  // The deterministic layers must be exactly reproducible: policy verdicts, expect evaluation,
-  // procedure tie-breaks, and routing all run again and every field except wall-clock is compared.
+  // Re-run and compare every field except wall-clock.
   if (process.argv.includes("--check-determinism")) {
     const second = await createHarness({ variant, databaseUrl, migrationUrl });
     const repeated: TaskResult[] = [];

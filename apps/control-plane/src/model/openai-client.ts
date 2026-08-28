@@ -22,15 +22,12 @@ import {
 export const OPENAI_PLANNING_MODEL = "gpt-5.5";
 export const OPENAI_CLASSIFICATION_MODEL = "gpt-5.4-mini";
 
-// The routing table's model ids name roles, not vendors: the classification id
-// selects this provider's classifier, anything else its planner.
+// Routed ids are roles, not vendors: classification id selects the classifier, else the planner.
 function modelFor(routed: string): string {
   return routed === CLASSIFICATION_MODEL ? OPENAI_CLASSIFICATION_MODEL : OPENAI_PLANNING_MODEL;
 }
 
-// Zod always stamps `$schema`. OpenAI structured outputs reject that keyword;
-// the Anywhere backend sent a handwritten schema without it. Leaving it in is
-// how a scan against gpt-5.4-mini sat until the SDK's 10-minute timeout.
+// Zod stamps $schema; OpenAI structured outputs reject that keyword.
 export function jsonSchemaForOpenAI(schema: z.ZodType): Record<string, unknown> {
   const json = z.toJSONSchema(schema) as Record<string, unknown>;
   delete json["$schema"];
@@ -38,8 +35,7 @@ export function jsonSchemaForOpenAI(schema: z.ZodType): Record<string, unknown> 
   return json;
 }
 
-// "max" is not offered on every reasoning model; "xhigh" is the highest tier
-// that is safe to request across the family.
+// "max" is not on every reasoning model; "xhigh" is the highest safe family-wide tier.
 function reasoningEffortOf(effort: EffortLevel): "low" | "medium" | "high" | "xhigh" {
   return effort === "max" ? "xhigh" : effort;
 }
@@ -61,9 +57,7 @@ function toolResultText(content: unknown): string {
   return "";
 }
 
-// Reasoning items must travel back verbatim (the API rejects a function_call
-// whose paired reasoning item is missing when nothing is stored server-side),
-// so each one rides the turn history inside a thinking block's signature.
+// Reasoning items must round-trip verbatim or the API rejects the paired function_call.
 function stashReasoning(item: ResponseReasoningItem): Anthropic.ThinkingBlock {
   return {
     type: "thinking",
@@ -122,9 +116,7 @@ export function toOpenAIInput(messages: Anthropic.MessageParam[]): ResponseInput
   return input;
 }
 
-// Compiled tool schemas may leave parameters optional, which strict mode
-// forbids; the loop already validates every tool call against the contract, so
-// schema following stays best-effort here rather than reshaping the schemas.
+// Strict mode forbids optional params; the loop validates calls, so schemas stay as-is.
 export function toOpenAITools(
   tools: Anthropic.Tool[],
   options?: { strict?: boolean },
@@ -226,8 +218,7 @@ function describeOpenAIError(error: unknown): Error {
   if (error instanceof OpenAI.APIUserAbortError) {
     return new TurnFailure("turn_cancelled", "the turn was cancelled", { cause: error });
   }
-  // Connection errors are APIError subclasses with no HTTP status. Matching
-  // APIError first produced "status undefined" on the stream.
+  // APIConnectionError is an APIError with no status; matching APIError first yielded "undefined".
   if (error instanceof OpenAI.APIConnectionError) {
     return new TurnFailure("model_unavailable", "the model could not be reached", { cause: error });
   }
@@ -260,8 +251,6 @@ export class OpenAIModelClient implements ModelClient {
 
   async generate(request: GenerateRequest): Promise<GenerateResult> {
     const startedAt = this.#now();
-    // Anywhere v1 used responses.create with strict function tools. The widget
-    // still streams so it can publish token deltas.
     const streamText = request.onTextDelta !== undefined;
     const params: ResponseCreateParamsNonStreaming = {
       model: modelFor(request.model),

@@ -118,8 +118,7 @@ test("stop takes effect before the next action, not after the turn", async () =>
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/settings/profile");
   await expect.poll(() => actionResultCount(first), { timeout: 15_000 }).toBe(1);
 
-  // The navigate result lands before the new document does; the badge click must
-  // wait for the re-injected content script to mount its host, or it hits the page.
+  // Navigate result lands before the new document; wait for re-injected host or the click misses.
   await page.locator("#sga-root").waitFor({ state: "attached", timeout: 10_000 });
   await page.mouse.click(VIEW.width - 32, VIEW.height - 32);
   await page.mouse.click(VIEW.width - 54, VIEW.height - 528);

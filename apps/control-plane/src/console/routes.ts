@@ -28,8 +28,6 @@ interface ConsoleRequest {
   headers: Record<string, string | string[] | undefined>;
 }
 
-// Generic over the logger so the console mounts on the application instance, which carries a
-// concrete logger type of its own.
 export type ConsoleHost<Logger extends FastifyBaseLogger = FastifyBaseLogger> = FastifyInstance<
   RawServerDefault,
   IncomingMessage,
@@ -143,7 +141,7 @@ export function registerConsoleRoutes<Logger extends FastifyBaseLogger>(
       const body = publishProcedureRequestSchema.safeParse(request.body);
       if (!body.success) throw new ApiFailure("payload_invalid");
 
-      // An invalid procedure is reported and never activated, so nothing is partly applied.
+      // Invalid procedure is reported and never activated; nothing is partly applied.
       const loaded = loadProcedure(body.data.sourceYaml);
       if (!loaded.ok) {
         return reply.status(422).send({
@@ -197,8 +195,6 @@ export function registerConsoleRoutes<Logger extends FastifyBaseLogger>(
     },
   );
 
-  // Onboarding is data, not code: a published OpenAPI document and a route table are enough.
-  // Everything discovered arrives disabled, for a person to review before it can be called.
   app.post<{ Querystring: { productId?: string } }>(
     "/internal/onboard",
     async (request, reply) => {

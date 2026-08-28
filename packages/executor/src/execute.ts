@@ -59,8 +59,7 @@ function isGrounded(action: ExecutorAction): boolean {
   return action.type !== "navigate_route" && action.type !== "invoke_capability";
 }
 
-// Frameworks that track input values read them through the prototype descriptor, so setting
-// the property directly is invisible to them.
+// Frameworks observe value via the prototype setter; assigning the property is invisible to them.
 function setValueObservably(element: HTMLInputElement | HTMLTextAreaElement, value: string): void {
   const view = element.ownerDocument.defaultView;
   const prototype =
@@ -116,8 +115,7 @@ export class ActionExecutor {
   async execute(candidate: unknown): Promise<ExecutionOutcome> {
     const url = this.#options.navigator.currentUrl();
 
-    // The vocabulary is closed. Anything outside it is refused before dispatch, without a
-    // digest, without a network call, and without reaching a handler.
+    // Closed vocabulary: refuse unknown actions before dispatch, digest, or any handler.
     const parsed = executorActionSchema.safeParse(candidate);
     if (!parsed.success) {
       const type =
@@ -154,7 +152,6 @@ export class ActionExecutor {
       }
       return outcome;
     } catch (error) {
-      // A handler that throws is recorded honestly rather than swallowed.
       return failure(
         "CAPABILITY_THREW",
         error instanceof Error ? error.message : String(error),

@@ -6,9 +6,7 @@ import { makeAnthropicProvider } from "./providers/anthropic.js";
 import { makeGeminiProvider } from "./providers/gemini.js";
 import { makeOpenAIProvider } from "./providers/openai.js";
 
-// The loop speaks one wire shape — the Anthropic message shape — regardless of
-// which model serves it. A provider translates that shape to its API and back;
-// nothing downstream of plan()/scan() knows which vendor answered.
+// Anthropic message shape is the loop's wire format for every vendor.
 export interface ModelProvider {
   plan(request: BetaMessageStreamParams): Promise<Anthropic.Beta.Messages.BetaMessage>;
   scan(strings: string[]): Promise<InjectionScan>;

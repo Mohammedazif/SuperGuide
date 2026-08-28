@@ -76,7 +76,6 @@ export async function ingestDocument(
 
   if (documentId === undefined) throw new Error("document insert returned no row");
 
-  // A re-index replaces a document's chunks atomically inside the caller's transaction.
   await tx.delete(chunkTable).where(eq(chunkTable.documentId, documentId));
 
   const pieces = chunkDocument(input.text);

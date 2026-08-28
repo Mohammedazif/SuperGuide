@@ -15,8 +15,7 @@ export interface ScoreContext {
   messages: string[];
 }
 
-// A task passes only when its predicate is satisfied against real state read back from the
-// customer's API. A plausible transcript proves nothing here.
+// Score against live API state; a plausible transcript proves nothing.
 export async function score(task: EvalTask, context: ScoreContext): Promise<PredicateOutcome[]> {
   const response = await fetch(new URL(`/api/v1/accounts/${context.accountId}`, context.fixtureUrl));
   const account: unknown = await response.json();

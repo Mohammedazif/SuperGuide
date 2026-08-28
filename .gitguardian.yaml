@@ -1,8 +1,4 @@
-# ggshield configuration. Scope is deliberately narrow: the repository holds no real
-# credential, and the fix for a secret-scanner finding is to stop committing the value,
-# not to add a path here. The entries below are local-development database
-# credentials that have to stay in the file to be useful, and the roles they name exist
-# only inside the throwaway PostgreSQL container from docker-compose.yml.
+# ignored-paths: throwaway local-dev DB creds only; never ignore a real secret.
 version: 2
 
 secret:
@@ -12,6 +8,5 @@ secret:
     - .github/workflows/ci.yml
     - tools/scripts/bootstrap-roles.sql
 
-  # Fail the scan on anything else, including in tests. Test fixtures are assembled from
-  # ordinary words at runtime for exactly this reason; see apps/control-plane/src/secrets/redact.test.ts.
+  # Tests assemble fixtures at runtime so scanners do not flag them.
   show-secrets: false

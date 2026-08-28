@@ -249,6 +249,6 @@ export function compileTools(input: CompileToolsInput): CompiledTool[] {
   if (input.groundedActionsEnabled) compiled.push(...groundedTools());
   compiled.push(...controlTools());
 
-  // Sorted so the cached prefix is byte-identical across turns of the same conversation.
+  // Sort so the cached prompt prefix is byte-identical across turns.
   return compiled.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
 }

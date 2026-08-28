@@ -22,8 +22,6 @@ export interface ScriptedModelClientOptions {
   classifications?: readonly unknown[];
 }
 
-// Replays a recorded transcript so the deterministic layers of the loop can be tested
-// exactly, without a model provider and without a network.
 export class ScriptedModelClient implements ModelClient {
   readonly requests: GenerateRequest[] = [];
   readonly #script: readonly ScriptedTurn[];

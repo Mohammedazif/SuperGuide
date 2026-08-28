@@ -71,9 +71,7 @@ export class AsymmetricIdentityVerifier implements IdentityVerifier {
 
     let payload: JWTPayload;
     try {
-      // The permitted algorithms come from the product's configuration. The token header
-      // never selects the algorithm, so a token signed with a symmetric key derived from the
-      // public key is rejected before any signature check is attempted.
+      // algorithms come from product config, never the token header (blocks alg-confusion).
       const verified = await jwtVerify(token, resolve, {
         algorithms,
         issuer: product.jwtIssuer,

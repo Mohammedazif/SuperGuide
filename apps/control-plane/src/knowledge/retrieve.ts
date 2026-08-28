@@ -72,8 +72,7 @@ export class PgVectorRetriever implements KnowledgeRetriever {
 
     let rows: CandidateRow[];
     try {
-      // Only fragments judged clean at index time are eligible. A fragment that could not be
-      // classified stays out of context rather than being retrieved on the benefit of doubt.
+      // Only index-time clean fragments; unclassified stays out of context, not retrieved on doubt.
       const result = await withProduct(this.#options.db, productId, (tx) =>
         tx.execute<CandidateRow>(sql`
           SELECT c.id, c.document_id, c.product_id, c.ordinal, c.content, c.injection_verdict,

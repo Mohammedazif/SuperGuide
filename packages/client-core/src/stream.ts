@@ -64,8 +64,7 @@ export class ConversationStreamClient {
     return this.#lastEventId;
   }
 
-  // Read through a method: narrowing on a private field survives an await, and stop() can be
-  // called while this stream is suspended reading the body.
+  // Read via method: TS private-field narrowing does not survive await; stop() can race.
   #isStopped(): boolean {
     return this.#stopped;
   }
@@ -76,8 +75,7 @@ export class ConversationStreamClient {
     void this.#open();
   }
 
-  // Text deltas are best effort and are never replayed. A reconnect serves durable rows only,
-  // so a resumed stream cannot repeat half a sentence the reader already saw.
+  // Reconnect serves durable rows only; text deltas are best-effort and never replayed.
   reconnectNow(): void {
     if (this.#stopped || this.#conversationId === null) return;
     this.#controller?.abort();

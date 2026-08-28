@@ -16,8 +16,7 @@ export interface ConfirmationRequest {
   action: ExecutorAction;
 }
 
-// One call, one action. There is no method here through which an approval could be cached,
-// and this package holds no module-level state that could become one.
+// One call, one action; no cached approval and no module-level state that could become one.
 export interface Confirmer {
   request(request: ConfirmationRequest): Promise<"approved" | "denied" | "timeout">;
 }

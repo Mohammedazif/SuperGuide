@@ -45,8 +45,7 @@ class NoCredentialsSigner implements RequestSigner {
   }
 }
 
-// The only place a customer's credential exists as plaintext. It is closed over here and
-// consumed by applyTo; nothing returns it, so it cannot reach a log line or a trajectory row.
+// Plaintext credential is closed over here; nothing returns it to logs or trajectory.
 class SealedCredentialsSigner implements RequestSigner {
   readonly #apply: (headers: Headers) => void;
   readonly #secrets: readonly string[];

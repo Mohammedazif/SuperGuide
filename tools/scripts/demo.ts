@@ -58,8 +58,6 @@ function liveKey(): string | null {
   return key;
 }
 
-// Without a provider key the demo still has to do something visible, so it replays a short
-// recorded transcript. The banner says which one is running; nothing here pretends otherwise.
 const RECORDED = [
   {
     text: "Let me read your account.",

@@ -182,8 +182,7 @@ function accountSection(model: PageModel): string {
     <dt>Seat limit</dt><dd>${model.account.seat_limit}</dd>
     <dt>Tax identifier</dt><dd>${escapeHtml(model.account.tax_id ?? "not set")}</dd>`;
 
-  // The registration number has no API operation and no route of its own. It exists so a task
-  // can be reachable only by operating the interface.
+  // No API/route of its own: a task can reach this only by operating the interface.
   const registration = field(
     model.variant,
     "registration_number",

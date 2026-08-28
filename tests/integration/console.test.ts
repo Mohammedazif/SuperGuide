@@ -101,7 +101,6 @@ describe("the console", () => {
     })();
     conversationId = seeded.conversationId;
 
-    // A run that fails its final check, so the viewer has a real failed trajectory to render.
     const ephemeral = new EphemeralBus();
     const confirmations = new ConfirmationRegistry();
     ephemeral.subscribe(conversationId, (event) => {
@@ -235,8 +234,7 @@ describe("the console", () => {
       messages: { content: { text: string } }[];
     };
 
-    // The executor reports the outcome; persisting it to the conversation is the runner's job,
-    // and this run was driven through the executor directly.
+    // Executor reports outcome; this run skipped the runner so conversation is not persisted.
     expect(runOutcome.resolutionState).toBe("escalated");
     expect(body.steps.length).toBeGreaterThan(0);
     expect(body.steps.some((step) => !step.expectOutcome.satisfied)).toBe(true);

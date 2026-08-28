@@ -50,8 +50,7 @@ export class ConfirmationRegistry {
     });
   }
 
-  // The server recomputes paramsHash from the action it proposed, so an approval is bound to
-  // one action's exact parameters. Nothing in this registry can outlive a single decision.
+  // Approval binds toolCallId + recomputed paramsHash and cannot outlive one decision.
   decide(
     conversationId: string,
     toolCallId: string,
@@ -67,8 +66,7 @@ export class ConfirmationRegistry {
     return { status: "accepted" };
   }
 
-  // A confirmation asked for on an ephemeral channel would be lost to a client that attaches a
-  // moment later, and the person would never be asked. Outstanding requests are re-announced.
+  // Ephemeral confirm events miss late attachers; re-announce outstanding requests.
   outstandingFor(conversationId: string): OutstandingConfirmation[] {
     const found: OutstandingConfirmation[] = [];
     for (const entry of this.#pending.values()) {

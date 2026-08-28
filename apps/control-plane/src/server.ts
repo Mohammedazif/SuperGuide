@@ -230,7 +230,7 @@ export function buildServer(deps: ServerDependencies): AppServer {
     };
   };
 
-  // Explicit so a preflight is routed rather than falling through to the not-found handler.
+  // Explicit OPTIONS so preflight is not 404'd by the not-found handler.
   app.options("/v1/*", (_request, reply) => reply.status(204).send());
   app.options("/v1", (_request, reply) => reply.status(204).send());
 

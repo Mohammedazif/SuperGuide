@@ -18,8 +18,7 @@ export function matchAdapter(
   adapters: readonly SiteAdapter[],
   host: string,
 ): SiteAdapter | null {
-  // Exact host only; the tie-break is deterministic whatever order the set
-  // arrives in: highest version first, then the lexicographically smallest body.
+  // Exact host; highest version then smallest JSON body, independent of input order.
   const candidates = adapters
     .filter((adapter) => adapter.host === host)
     .sort((left, right) => {
@@ -35,7 +34,6 @@ function staticPrefixOf(template: string): string {
 }
 
 export function matchRoute(adapter: SiteAdapter, path: string): AdapterRoute | null {
-  // Longest static prefix wins; equal lengths tie-break to the smallest id.
   const candidates = adapter.routes
     .filter((route) => path.startsWith(staticPrefixOf(route.template)))
     .sort((left, right) => {

@@ -13,9 +13,6 @@ export interface SimulatedBrowserOptions {
   groundedActionsEnabled: boolean;
 }
 
-// The eval drives the real observer and the real executor over the fixture application's real
-// markup, rendered by jsdom for the interface variant under test. Nothing about the page is
-// faked, which is what makes running the same tasks against variant B mean anything.
 export class SimulatedBrowser {
   #dom: JSDOM;
   #observer = new PageObserver();
@@ -84,8 +81,7 @@ export class SimulatedBrowser {
     });
   }
 
-  // Forms in the fixture application post through fetch, which jsdom does not run. Submitting
-  // is performed here so a grounded action reaches the customer's API exactly as it would.
+  // jsdom does not run form fetch; submit here so grounded actions hit the customer's API.
   async #submitForms(): Promise<void> {
     const document = this.#dom.window.document;
     for (const form of document.querySelectorAll("form[data-submitted='pending']")) {

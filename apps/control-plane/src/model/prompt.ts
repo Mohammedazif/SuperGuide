@@ -70,8 +70,7 @@ function productBlock(input: CachedPrefixInput): string {
   return lines.join("\n");
 }
 
-// No clock, no identifier, and no unordered serialisation may appear here: this is the cached
-// prefix and any byte that changes between turns invalidates everything after it.
+// No clock, id, or unordered serialisation: any byte change invalidates the cached prefix.
 export function buildCachedPrefix(input: CachedPrefixInput): CachedPrefix {
   const system: Anthropic.TextBlockParam[] = [
     { type: "text", text: FROZEN_INSTRUCTIONS, cache_control: { type: "ephemeral" } },

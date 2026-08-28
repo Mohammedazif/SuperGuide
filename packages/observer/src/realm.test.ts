@@ -21,8 +21,7 @@ describe("resolving constructors from an element's own realm", () => {
     expect(inner).toBeDefined();
     if (inner === null || inner === undefined) return;
 
-    // The defect this guards: an element inside a frame is not an instance of the top
-    // window's constructor, so a global instanceof check silently classifies it as nothing.
+    // Frame elements are not instances of the top window's constructors.
     expect(inner instanceof HTMLInputElement).toBe(false);
     expect(asInput(inner)).not.toBeNull();
     expect(isElementOfType(inner, "HTMLInputElement")).toBe(true);

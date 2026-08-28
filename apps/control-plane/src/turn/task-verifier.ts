@@ -14,8 +14,7 @@ function findApiTool(tools: readonly CompiledTool[], operationId: string): Compi
   );
 }
 
-// Task-level success is checked against API state after the task completes, independently of
-// anything a client reported.
+// Verify task success against API state, not anything a client reported.
 export class ApiTaskVerifier implements TaskVerifier {
   async verify(
     selection: ProcedureSelection,

@@ -1,5 +1,4 @@
--- The console configures a product. Column grants keep that narrow: identity, tenancy, and
--- the soft-delete marker stay outside what the application role can change.
+-- Column grants omit id, tenant_id, deleted_at; sg_app cannot change identity or tenancy.
 GRANT UPDATE (
   name,
   origin_allowlist,

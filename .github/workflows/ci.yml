@@ -28,9 +28,7 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      # Typed linting resolves types across workspace packages, so it needs the emitted
-      # declarations. typecheck runs tsc -b, which produces them; lint before it sees
-      # unresolved types and fails on a clean checkout even though it passes locally.
+      # Lint must run after typecheck because typed lint needs emitted declarations.
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm build

@@ -1,6 +1,4 @@
--- A pooled connection resets sg.product_id to the empty string after SET LOCAL commits,
--- and ''::uuid raises rather than yielding NULL. NULLIF restores the intended property:
--- a connection that has not scoped itself sees nothing instead of erroring.
+-- Pooled SET LOCAL leaves sg.product_id as ''; NULLIF so ''::uuid does not raise.
 CREATE FUNCTION sg_current_product_id() RETURNS uuid
 LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('sg.product_id', true), '')::uuid;

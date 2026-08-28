@@ -24,7 +24,6 @@ export const GEMINI_CLASSIFIER_MODEL = "gemini-2.5-flash";
 type BetaMessage = Anthropic.Beta.Messages.BetaMessage;
 type ContentBlock = Anthropic.Beta.Messages.BetaContentBlock;
 
-// Refusal-shaped finish reasons; anything here ends the turn as a model refusal.
 const REFUSAL_FINISH = new Set([
   "SAFETY",
   "RECITATION",
@@ -53,9 +52,7 @@ function toolResultText(content: unknown): string {
   return "";
 }
 
-// Thought signatures must return with the part they were issued for, or the
-// model loses its reasoning thread across function calls. Each one rides the
-// turn history inside a thinking block and is re-attached to the next part.
+// Thought signatures must return with the issued part or reasoning is lost.
 function encodeSignature(thoughtSignature: string | undefined): string {
   return thoughtSignature === undefined ? "{}" : JSON.stringify({ sig: thoughtSignature });
 }
@@ -69,8 +66,7 @@ function decodeSignature(signature: string): string | null {
   }
 }
 
-// A Gemini-issued call id must echo back verbatim while a synthetic one (made
-// only to satisfy the internal shape's binding) must not reach the API.
+// Echo Gemini call ids; synthetic s- ids must not reach the API.
 function callIdFor(geminiId: string | undefined): string {
   return geminiId === undefined ? `s-${crypto.randomUUID()}` : `g-${geminiId}`;
 }

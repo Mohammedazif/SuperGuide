@@ -43,9 +43,7 @@ function toolResultText(content: unknown): string {
   return "";
 }
 
-// Reasoning items must travel back verbatim (the API rejects a function_call
-// whose paired reasoning item is missing when nothing is stored server-side),
-// so each one rides the turn history inside a thinking block's signature.
+// Reasoning items must return verbatim or the API rejects the next function_call.
 function stashReasoning(item: ResponseReasoningItem): ContentBlock {
   return {
     type: "thinking",

@@ -22,8 +22,7 @@ function scrubString(value: string, options: RedactionOptions): string {
   return output;
 }
 
-// Pure by construction so it can be tested against a corpus. Everything written to the
-// trajectory passes through it first.
+// Everything written to the trajectory passes through this first.
 export function redact(value: unknown, options: RedactionOptions, depth = 0): unknown {
   const maxDepth = options.maxDepth ?? 12;
   if (depth > maxDepth) return REDACTED;
