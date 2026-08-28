@@ -21,17 +21,33 @@ export function postgresRoleName(user: string): string {
   return separator > 0 ? user.slice(0, separator) : user;
 }
 
-function ensureRoleSql(role: string, password: string): string {
-  return `
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ${quoteLiteral(role)}) THEN
-    CREATE ROLE ${quoteIdent(role)} LOGIN PASSWORD ${quoteLiteral(password)};
-  END IF;
-END
-$$;
-ALTER ROLE ${quoteIdent(role)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD ${quoteLiteral(password)};
-`.trim();
+export function createLoginRoleSql(role: string, password: string): string {
+  return `CREATE ROLE ${quoteIdent(role)} LOGIN PASSWORD ${quoteLiteral(password)}`;
+}
+
+export function alterLoginPasswordSql(role: string, password: string): string {
+  return `ALTER ROLE ${quoteIdent(role)} LOGIN PASSWORD ${quoteLiteral(password)}`;
+}
+
+async function tryQuery(client: pg.Client, sql: string, skipLabel: string): Promise<void> {
+  try {
+    await client.query(sql);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    process.stdout.write(`skipped ${skipLabel}: ${detail}\n`);
+  }
+}
+
+async function ensureLoginRole(client: pg.Client, role: string, password: string): Promise<void> {
+  const existing = await client.query<{ exists: boolean }>(
+    "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1) AS exists",
+    [role],
+  );
+  if (existing.rows[0]?.exists === true) {
+    await tryQuery(client, alterLoginPasswordSql(role, password), `ALTER ROLE ${role}`);
+    return;
+  }
+  await client.query(createLoginRoleSql(role, password));
 }
 
 export async function bootstrapHostedRoles(): Promise<void> {
@@ -57,33 +73,35 @@ export async function bootstrapHostedRoles(): Promise<void> {
       throw new Error("could not read current_database()");
     }
 
-    await client.query(ensureRoleSql(APP_ROLE, app.password));
-    await client.query(ensureRoleSql(MIGRATOR_ROLE, migratorPassword));
-    await client.query(
-      `GRANT CONNECT ON DATABASE ${quoteIdent(dbName)} TO ${quoteIdent(APP_ROLE)}`,
+    await ensureLoginRole(client, APP_ROLE, app.password);
+    await ensureLoginRole(client, MIGRATOR_ROLE, migratorPassword);
+
+    const db = quoteIdent(dbName);
+    await tryQuery(
+      client,
+      `GRANT CONNECT ON DATABASE ${db} TO ${quoteIdent(APP_ROLE)}`,
+      "GRANT CONNECT to sg_app",
     );
-    await client.query(
-      `GRANT CONNECT ON DATABASE ${quoteIdent(dbName)} TO ${quoteIdent(MIGRATOR_ROLE)}`,
+    await tryQuery(
+      client,
+      `GRANT CONNECT ON DATABASE ${db} TO ${quoteIdent(MIGRATOR_ROLE)}`,
+      "GRANT CONNECT to sg_migrator",
     );
-    try {
-      await client.query(
-        `GRANT CREATE ON DATABASE ${quoteIdent(dbName)} TO ${quoteIdent(MIGRATOR_ROLE)}`,
-      );
-    } catch {
-      process.stdout.write(
-        "skipped GRANT CREATE ON DATABASE; migrate as the platform postgres role\n",
-      );
-    }
-    await client.query(
+    await tryQuery(
+      client,
+      `GRANT CREATE ON DATABASE ${db} TO ${quoteIdent(MIGRATOR_ROLE)}`,
+      "GRANT CREATE ON DATABASE",
+    );
+    await tryQuery(
+      client,
       `GRANT USAGE ON SCHEMA public TO ${quoteIdent(APP_ROLE)}, ${quoteIdent(MIGRATOR_ROLE)}`,
+      "GRANT USAGE ON SCHEMA public",
     );
-    try {
-      await client.query(`GRANT CREATE ON SCHEMA public TO ${quoteIdent(MIGRATOR_ROLE)}`);
-    } catch {
-      process.stdout.write(
-        "skipped GRANT CREATE ON SCHEMA public; migrate as the platform postgres role\n",
-      );
-    }
+    await tryQuery(
+      client,
+      `GRANT CREATE ON SCHEMA public TO ${quoteIdent(MIGRATOR_ROLE)}`,
+      "GRANT CREATE ON SCHEMA public",
+    );
   } finally {
     await client.end();
   }
