@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type Anthropic from "@anthropic-ai/sdk";
+import type {
+  BetaContentBlockParam,
+  BetaMessage,
+  BetaMessageParam,
+  BetaToolUseBlockParam,
+} from "@anthropic-ai/sdk/resources/beta/messages";
 import type { GrantTier, PageDigest, TurnEvent } from "@superguide/contract/anywhere";
 import { TurnAgent } from "../../apps/control-plane/src/anywhere/agent/loop.js";
 import { TurnStore } from "../../apps/control-plane/src/anywhere/store.js";
@@ -15,12 +20,12 @@ import {
 let harness: TestHarness;
 let token: string;
 let deviceId: string;
-const scripts = new Map<string, Anthropic.Message[]>();
+const scripts = new Map<string, BetaMessage[]>();
 
 function modelMessage(
-  content: Anthropic.ContentBlockParam[],
-  stopReason: Anthropic.Message["stop_reason"],
-): Anthropic.Message {
+  content: BetaContentBlockParam[],
+  stopReason: BetaMessage["stop_reason"],
+): BetaMessage {
   return {
     id: `msg_${randomUUID()}`,
     type: "message",
@@ -35,14 +40,14 @@ function modelMessage(
       input_tokens: 100,
       output_tokens: 10,
     },
-  } as Anthropic.Message;
+  } as BetaMessage;
 }
 
-function toolUse(name: string, input: unknown): Anthropic.ToolUseBlockParam {
+function toolUse(name: string, input: unknown): BetaToolUseBlockParam {
   return { type: "tool_use", id: `toolu_${randomUUID()}`, name, input };
 }
 
-function taskTextOf(messages: Anthropic.MessageParam[] | undefined): string {
+function taskTextOf(messages: BetaMessageParam[] | undefined): string {
   const first = messages?.[0];
   const content = typeof first?.content === "string" ? first.content : "";
   const match = /^Task from the person: (.*)$/m.exec(content);
@@ -603,7 +608,7 @@ describe("the turn loop", () => {
 
   it("exhausts the step budget with an honest report, not a claim", async () => {
     const task = `budget spender ${randomUUID()}`;
-    const readAction = (): Anthropic.Message =>
+    const readAction = (): BetaMessage =>
       modelMessage(
         [
           toolUse("page_action", {

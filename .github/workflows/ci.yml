@@ -14,7 +14,7 @@ jobs:
   static:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Generate run-scoped keys
         run: |
           {
@@ -25,7 +25,7 @@ jobs:
             echo "SG_ALLOWED_EXTENSION_IDS=chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj"
           } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       # Typed linting resolves types across workspace packages, so it needs the emitted
@@ -53,7 +53,7 @@ jobs:
           --health-cmd "pg_isready -U postgres -d superguide"
           --health-interval 2s --health-timeout 3s --health-retries 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Generate run-scoped keys
         run: |
           {
@@ -64,7 +64,7 @@ jobs:
             echo "SG_ALLOWED_EXTENSION_IDS=chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj"
           } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -87,7 +87,7 @@ jobs:
       - run: pnpm eval --variant=a --check-determinism
       - run: pnpm eval --variant=b
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: eval-results
