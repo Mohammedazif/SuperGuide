@@ -4,6 +4,7 @@ dist/
 # emitted output must never land in a source tree
 .env
 .env.local
+.env.render
 eval/results/
 node_modules/
 .pgdata/

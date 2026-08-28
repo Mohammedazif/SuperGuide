@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePostgresUrl, quoteIdent, quoteLiteral } from "./bootstrap.js";
+import { parsePostgresUrl, postgresRoleName, quoteIdent, quoteLiteral } from "./bootstrap.js";
 
 describe("hosted postgres URLs", () => {
   it("parses a local URL", () => {
@@ -20,6 +20,14 @@ describe("hosted postgres URLs", () => {
       password: "p@ss",
       database: "postgres",
     });
+  });
+});
+
+describe("pooler usernames", () => {
+  it("strips the Supabase project ref suffix", () => {
+    expect(postgresRoleName("sg_app")).toBe("sg_app");
+    expect(postgresRoleName("sg_app.mijclvicetbzxlkkijdf")).toBe("sg_app");
+    expect(postgresRoleName("postgres.abc")).toBe("postgres");
   });
 });
 

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { schema } from "./schema.js";
+import { pgConnectOptions } from "./connect.js";
 
 export type Database = NodePgDatabase<typeof schema>;
 export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -13,7 +14,7 @@ export interface DatabaseHandle {
 }
 
 export function createDatabase(connectionString: string, maxConnections = 10): DatabaseHandle {
-  const pool = new pg.Pool({ connectionString, max: maxConnections });
+  const pool = new pg.Pool({ ...pgConnectOptions(connectionString), max: maxConnections });
   const db: Database = drizzle(pool, { schema });
   return {
     db,

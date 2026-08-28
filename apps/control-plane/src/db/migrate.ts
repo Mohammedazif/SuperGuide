@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { pgConnectOptions } from "./connect.js";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../migrations");
 
@@ -26,7 +27,7 @@ function listMigrations(): { filename: string; contents: string }[] {
 }
 
 export async function runMigrations(connectionString: string): Promise<MigrationOutcome> {
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client(pgConnectOptions(connectionString));
   await client.connect();
   const applied: string[] = [];
   const skipped: string[] = [];

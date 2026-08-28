@@ -1,5 +1,6 @@
 import pg from "pg";
 import { z } from "zod";
+import { pgConnectOptions } from "../db/connect.js";
 
 export const ANYWHERE_NOTIFY_CHANNEL = "sga_events";
 
@@ -14,7 +15,7 @@ export class EventBus {
   private constructor(private readonly client: pg.Client) {}
 
   static async start(connectionString: string): Promise<EventBus> {
-    const client = new pg.Client({ connectionString });
+    const client = new pg.Client(pgConnectOptions(connectionString));
     await client.connect();
     const bus = new EventBus(client);
     client.on("notification", (message) => {

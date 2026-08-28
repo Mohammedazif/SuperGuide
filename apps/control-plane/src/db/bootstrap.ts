@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { loadBootstrapConnectionStrings } from "../env.js";
+import { pgConnectOptions } from "./connect.js";
 
 const APP_ROLE = "sg_app";
 const MIGRATOR_ROLE = "sg_migrator";
@@ -33,6 +34,11 @@ export function quoteLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
+export function postgresRoleName(user: string): string {
+  const separator = user.indexOf(".");
+  return separator > 0 ? user.slice(0, separator) : user;
+}
+
 function ensureRoleSql(role: string, password: string): string {
   return `
 DO $$
@@ -51,14 +57,16 @@ export async function bootstrapHostedRoles(): Promise<void> {
 
   const app = parsePostgresUrl(appUrl);
   const migrator = parsePostgresUrl(migrationUrl);
-  if (app.user !== APP_ROLE) {
+  if (postgresRoleName(app.user) !== APP_ROLE) {
     throw new Error(`SG_DATABASE_URL user must be ${APP_ROLE}; migrations grant to that role`);
   }
 
   const migratorPassword =
-    migrator.user === MIGRATOR_ROLE ? migrator.password : randomBytes(32).toString("base64");
+    postgresRoleName(migrator.user) === MIGRATOR_ROLE
+      ? migrator.password
+      : randomBytes(32).toString("base64");
 
-  const client = new pg.Client({ connectionString: migrationUrl });
+  const client = new pg.Client(pgConnectOptions(migrationUrl));
   await client.connect();
   try {
     const dbName = (await client.query<{ db: string }>("SELECT current_database() AS db")).rows[0]

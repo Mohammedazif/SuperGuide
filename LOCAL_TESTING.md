@@ -143,9 +143,9 @@ Open any site (the SuperGuide fixture at `http://127.0.0.1:8099` is a good one).
 ## Hosted (before first deploy)
 
 The API image bootstraps `sg_app` / `sg_migrator` and runs migrations on start. You still need a
-Postgres with `vector`, a **direct** (not pooled) connection, and a Render **Starter** (or larger)
+Postgres with `vector`, the **Session pooler** URI (IPv4, port 5432), and a Render **Starter** (or larger)
 web service from `render.yaml`. Do not use Render's free instance: it sleeps and drops in-flight
-turns.
+turns. Paste env from `.env.render.example`, not from `.env`.
 
 ```bash
 pnpm env:init                 # once; then fill the model key

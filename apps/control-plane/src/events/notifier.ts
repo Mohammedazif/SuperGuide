@@ -1,6 +1,7 @@
 import pg from "pg";
 import { z } from "zod";
 import type { AppLogger } from "../logging.js";
+import { pgConnectOptions } from "../db/connect.js";
 
 export const NOTIFY_CHANNEL = "sg_events";
 
@@ -72,7 +73,7 @@ export class PostgresNotifier implements DurableNotifier {
   }
 
   async #connect(): Promise<void> {
-    const client = new pg.Client({ connectionString: this.#connectionString });
+    const client = new pg.Client(pgConnectOptions(this.#connectionString));
 
     client.on("notification", (raw) => {
       if (raw.channel !== NOTIFY_CHANNEL || raw.payload === undefined) return;
