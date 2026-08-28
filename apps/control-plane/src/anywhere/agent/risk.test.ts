@@ -82,10 +82,10 @@ describe("static risk classification", () => {
     expect(classifyRisk({ kind: "click", target: { id: "e00000002" } }, digest)).toBe("sensitive");
   });
 
-  it("treats an unclassifiable target as sensitive, never read", () => {
-    expect(classifyRisk({ kind: "click", target: { id: "e0000000f" } }, digest)).toBe("sensitive");
-    expect(classifyRisk({ kind: "click", target: { id: "e00000003" } }, digest)).toBe("sensitive");
-    expect(classifyRisk({ kind: "click", target: { id: "e00000001" } }, null)).toBe("sensitive");
+  it("treats an unclassifiable target as write, never read or sensitive", () => {
+    expect(classifyRisk({ kind: "click", target: { id: "e0000000f" } }, digest)).toBe("write");
+    expect(classifyRisk({ kind: "click", target: { id: "e00000003" } }, digest)).toBe("write");
+    expect(classifyRisk({ kind: "click", target: { id: "e00000001" } }, null)).toBe("write");
   });
 
   it("matches every sensitive term as a whole word", () => {

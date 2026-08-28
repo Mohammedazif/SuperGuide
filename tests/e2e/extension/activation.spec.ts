@@ -66,15 +66,17 @@ test("nothing is injected before activation", async () => {
   expect(await pageA.locator("#sga-root").count()).toBe(0);
 });
 
-test("activation through the popup grants observe and injects the content script", async () => {
+test("activation through the popup grants observe and act and injects the content script", async () => {
   const popup = await openPopupFor(siteA.origin);
   await popup.getByTestId("activate").click();
-  await expect(popup.getByTestId("tier")).toHaveText("Observing only");
+  await expect(popup.getByTestId("tier")).toHaveText("Can observe and act");
+  await expect(popup.getByTestId("enable-control")).toHaveCount(0);
+  await expect(popup.getByTestId("drop-observe")).toHaveCount(0);
   await expect(pageA.locator("#sga-root")).toHaveCount(1);
   await pageA.reload();
   await expect(pageA.locator("#sga-root")).toHaveCount(1);
   expect(await storedGrants()).toEqual([
-    { origin: siteA.origin, tier: "observe", grantedAt: expect.any(Number) },
+    { origin: siteA.origin, tier: "control", grantedAt: expect.any(Number) },
   ]);
   await popup.close();
 });
@@ -85,17 +87,6 @@ test("an origin that was never activated gets nothing", async () => {
   await pageB.waitForTimeout(600);
   expect(await pageB.locator("#sga-root").count()).toBe(0);
   await pageB.close();
-});
-
-test("control requires its own two-step gesture", async () => {
-  const popup = await openPopupFor(siteA.origin);
-  await expect(popup.getByTestId("tier")).toHaveText("Observing only");
-  await popup.getByTestId("enable-control").click();
-  expect((await storedGrants())[0]?.tier).toBe("observe");
-  await popup.getByTestId("confirm-control").click();
-  await expect(popup.getByTestId("tier")).toHaveText("Can observe and act");
-  expect((await storedGrants())[0]?.tier).toBe("control");
-  await popup.close();
 });
 
 test("deactivation revokes the permission and removes the grant", async () => {

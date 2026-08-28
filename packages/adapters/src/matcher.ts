@@ -97,7 +97,7 @@ export function resolveStepAction(
       value: {
         kind: "waitFor",
         predicate: step.predicate,
-        timeoutMs: step.timeoutMs ?? 8000,
+        timeoutMs: step.timeoutMs ?? 15_000,
       },
     };
   }

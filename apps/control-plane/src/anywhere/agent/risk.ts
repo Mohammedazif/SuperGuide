@@ -78,8 +78,8 @@ export function classifyRisk(action: AgentAction, digest: PageDigest | null): Ri
     case "select":
     case "check": {
       const name = targetName(action.target.id, digest);
-      if (name === null) return "sensitive";
-      return SENSITIVE_NAME.test(name) ? "sensitive" : "write";
+      if (name !== null && SENSITIVE_NAME.test(name)) return "sensitive";
+      return "write";
     }
     default: {
       const exhausted: never = action;

@@ -222,7 +222,7 @@ describe("step resolution against a digest", () => {
       value: {
         kind: "waitFor",
         predicate: { kind: "element-present", target: { role: "link", name: "Connections" } },
-        timeoutMs: 8000,
+        timeoutMs: 15_000,
       },
     });
   });

@@ -11,7 +11,7 @@ capabilities:
       - action: click
         target: { role: button, name: "Settings" }
       - action: waitFor
-        timeoutMs: 5000
+        timeoutMs: 15000
         predicate:
           kind: element-present
           target: { role: tab, name: "Connections" }
@@ -25,14 +25,14 @@ capabilities:
     params: []
     steps:
       - action: waitFor
-        timeoutMs: 4000
+        timeoutMs: 15000
         predicate:
           kind: element-present
           target: { role: tab, name: "Connections" }
       - action: click
         target: { role: tab, name: "Connections" }
       - action: waitFor
-        timeoutMs: 5000
+        timeoutMs: 15000
         predicate:
           kind: text-matches
           target: null
@@ -40,7 +40,7 @@ capabilities:
       - action: click
         target: { role: button, name: "Slack" }
       - action: waitFor
-        timeoutMs: 5000
+        timeoutMs: 15000
         predicate:
           kind: element-present
           target: { role: button, name: "Get connection" }

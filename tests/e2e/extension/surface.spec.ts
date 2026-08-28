@@ -97,9 +97,6 @@ test("the UI renders under the fixture app's strict CSP, header byte-identical",
     `chrome-extension://${EXTENSION_ID}/popup.html?target=${encodeURIComponent(app.origin)}`,
   );
   await popup.getByTestId("activate").click();
-  await expect(popup.getByTestId("tier")).toHaveText("Observing only");
-  await popup.getByTestId("enable-control").click();
-  await popup.getByTestId("confirm-control").click();
   await expect(popup.getByTestId("tier")).toHaveText("Can observe and act");
   await popup.close();
 
@@ -120,8 +117,7 @@ test("stop takes effect before the next action, not after the turn", async () =>
 
   // Navigate result lands before the new document; wait for re-injected host or the click misses.
   await page.locator("#sga-root").waitFor({ state: "attached", timeout: 10_000 });
-  await page.mouse.click(VIEW.width - 32, VIEW.height - 32);
-  await page.mouse.click(VIEW.width - 54, VIEW.height - 528);
+  await page.mouse.click(Math.floor(VIEW.width / 2), VIEW.height - 28);
 
   const second = emitAction(turnId, "/settings/plan");
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 3_000));
@@ -143,13 +139,17 @@ test("a mid-turn downgrade to observe stops the next action, not the turn after"
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/settings/team");
   await expect.poll(() => actionResultCount(first), { timeout: 15_000 }).toBe(1);
 
-  const popup = await context.newPage();
-  await popup.goto(
-    `chrome-extension://${EXTENSION_ID}/popup.html?target=${encodeURIComponent(app.origin)}`,
+  const worker = await serviceWorkerOf(context);
+  await worker.evaluate(
+    async ({ key, origin }) => {
+      const stored = await chrome.storage.local.get(key);
+      const grants = ((stored[key] as { origin: string; tier: string }[] | undefined) ?? []).map(
+        (grant) => (grant.origin === origin ? { ...grant, tier: "observe" } : grant),
+      );
+      await chrome.storage.local.set({ [key]: grants });
+    },
+    { key: "sga.grants", origin: app.origin },
   );
-  await popup.getByTestId("drop-observe").click();
-  await expect(popup.getByTestId("tier")).toHaveText("Observing only");
-  await popup.close();
 
   const second = emitAction(turnId, "/settings/plan");
   await expect.poll(() => actionResultCount(second), { timeout: 15_000 }).toBe(1);

@@ -112,7 +112,7 @@ test.beforeAll(async () => {
     `chrome-extension://${EXTENSION_ID}/popup.html?target=${encodeURIComponent(site.origin)}`,
   );
   await popup.getByTestId("activate").click();
-  await expect(popup.getByTestId("tier")).toHaveText("Observing only");
+  await expect(popup.getByTestId("tier")).toHaveText("Can observe and act");
   await popup.close();
   await expect(page.locator("#sga-root")).toHaveCount(1);
 });

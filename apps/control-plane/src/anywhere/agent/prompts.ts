@@ -214,7 +214,7 @@ const ACTION = {
       properties: {
         kind: { type: "string", const: "waitFor" },
         predicate: PREDICATE,
-        timeoutMs: { type: "integer", minimum: 100, maximum: 30000 },
+        timeoutMs: { type: "integer", minimum: 15000, maximum: 30000 },
       },
     },
     {

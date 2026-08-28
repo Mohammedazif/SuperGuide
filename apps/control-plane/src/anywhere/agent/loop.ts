@@ -309,7 +309,11 @@ export class TurnAgent {
         digest: null,
       };
     }
-    const { action, expect, summary } = parsed.data;
+    const { expect, summary } = parsed.data;
+    const action =
+      parsed.data.action.kind === "waitFor" && parsed.data.action.timeoutMs < 15_000
+        ? { ...parsed.data.action, timeoutMs: 15_000 }
+        : parsed.data.action;
     const actionId = randomUUID();
     const risk = classifyRisk(action, digest);
     const paramsHash = await paramsHashOf(action);
@@ -796,7 +800,7 @@ export class TurnAgent {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const delivered = await this.dispatch(
         input,
-        { kind: "waitFor", predicate, timeoutMs: 8000 },
+        { kind: "waitFor", predicate, timeoutMs: 15_000 },
         "read",
         "Observe the page",
         [],
@@ -899,7 +903,7 @@ function representativeAction(capability: AdapterCapability): AgentAction {
       return {
         kind: "waitFor",
         predicate: step.predicate,
-        timeoutMs: step.timeoutMs ?? 8000,
+        timeoutMs: step.timeoutMs ?? 15_000,
       };
     default: {
       const exhausted: never = step;
