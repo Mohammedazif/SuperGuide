@@ -1,30 +1,12 @@
 import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { loadBootstrapConnectionStrings } from "../env.js";
-import { pgConnectOptions } from "./connect.js";
+import { parsePostgresUrl, pgConnectOptions } from "./connect.js";
+
+export { parsePostgresUrl } from "./connect.js";
 
 const APP_ROLE = "sg_app";
 const MIGRATOR_ROLE = "sg_migrator";
-
-export function parsePostgresUrl(connectionString: string): {
-  user: string;
-  password: string;
-  database: string;
-} {
-  let parsed: URL;
-  try {
-    parsed = new URL(connectionString.replace(/^postgres(?:ql)?:/i, "http:"));
-  } catch {
-    throw new Error("database URL is not a valid postgres URL");
-  }
-  const database = decodeURIComponent(parsed.pathname.replace(/^\//, "")).split("/")[0] ?? "";
-  if (database.length === 0) throw new Error("postgres URL must include a database name");
-  return {
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database,
-  };
-}
 
 export function quoteIdent(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;

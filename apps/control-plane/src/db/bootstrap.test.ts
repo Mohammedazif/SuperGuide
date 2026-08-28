@@ -1,27 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePostgresUrl, postgresRoleName, quoteIdent, quoteLiteral } from "./bootstrap.js";
-
-describe("hosted postgres URLs", () => {
-  it("parses a local URL", () => {
-    expect(parsePostgresUrl("postgres://sg_app:sg_app_dev@127.0.0.1:55432/superguide")).toEqual({
-      user: "sg_app",
-      password: "sg_app_dev",
-      database: "superguide",
-    });
-  });
-
-  it("parses a Supabase direct URL with encoded password and sslmode", () => {
-    expect(
-      parsePostgresUrl(
-        "postgresql://sg_app:p%40ss@db.abc.supabase.co:5432/postgres?sslmode=require",
-      ),
-    ).toEqual({
-      user: "sg_app",
-      password: "p@ss",
-      database: "postgres",
-    });
-  });
-});
+import { postgresRoleName, quoteIdent, quoteLiteral } from "./bootstrap.js";
 
 describe("pooler usernames", () => {
   it("strips the Supabase project ref suffix", () => {
