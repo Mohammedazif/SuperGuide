@@ -1,7 +1,7 @@
 import type { ClientConfig, PoolConfig } from "pg";
 
 export function pgConnectOptions(connectionString: string): ClientConfig & PoolConfig {
-  return { connectionString, family: 4 };
+  return { connectionString };
 }
 
 export function explainPgConnectError(error: unknown): string {
