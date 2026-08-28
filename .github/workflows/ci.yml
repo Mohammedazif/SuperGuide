@@ -21,6 +21,8 @@ jobs:
             echo "SG_SESSION_SIGNING_KEY=$(openssl rand -base64 32)"
             echo "SG_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "SG_WEBHOOK_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_DEVICE_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_ALLOWED_EXTENSION_IDS=chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj"
           } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -58,6 +60,8 @@ jobs:
             echo "SG_SESSION_SIGNING_KEY=$(openssl rand -base64 32)"
             echo "SG_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "SG_WEBHOOK_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_DEVICE_SIGNING_KEY=$(openssl rand -base64 32)"
+            echo "SG_ALLOWED_EXTENSION_IDS=chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj"
           } >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4

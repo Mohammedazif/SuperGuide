@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import Fastify, { type FastifyInstance, type RawServerDefault } from "fastify";
+import type pg from "pg";
 import {
   capabilityRegistrationSchema,
   chatRequestSchema,
@@ -43,6 +44,8 @@ import type { PendingCalls } from "./turn/pending-calls.js";
 import type { ConfirmationRegistry } from "./turn/confirmations.js";
 import type { TurnRunner } from "./turn/types.js";
 import { registerConsoleRoutes } from "./console/routes.js";
+import { registerAnywhereRoutes } from "./anywhere/routes.js";
+import type { AnywhereSurface } from "./anywhere/types.js";
 
 export interface Clock {
   now(): Date;
@@ -52,6 +55,7 @@ export interface ServerDependencies {
   env: Environment;
   logger: AppLogger;
   db: Database;
+  pool: pg.Pool;
   notifier: DurableNotifier;
   ephemeral: EphemeralBus;
   pendingCalls: PendingCalls;
@@ -61,6 +65,7 @@ export interface ServerDependencies {
   streams: StreamRegistry;
   rateLimiters: RateLimiters;
   clock: Clock;
+  anywhere: AnywhereSurface;
   sessionTtlSeconds?: number;
   heartbeatIntervalMs?: number;
 }
@@ -138,9 +143,17 @@ export function buildServer(deps: ServerDependencies): AppServer {
       .send({ error: { code: "internal_error", message: "Internal error." } });
   });
 
+  registerAnywhereRoutes(app, {
+    env: deps.env,
+    pool: deps.pool,
+    bus: deps.anywhere.bus,
+    agent: deps.anywhere.agent,
+    adapterSet: deps.anywhere.adapterSet,
+  });
+
   app.addHook("onRequest", async (request, reply) => {
     reply.header("x-sg-request-id", request.id);
-    if (!request.url.startsWith("/v1")) return;
+    if (!request.url.startsWith("/v1") || request.url.startsWith("/v1/anywhere")) return;
 
     const productId = productIdFrom(request);
     if (productId === null) throw new ApiFailure("payload_invalid", "x-sg-product-id is required");

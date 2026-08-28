@@ -11,6 +11,10 @@
     "./internal": {
       "types": "./dist/internal/index.d.ts",
       "default": "./dist/internal/index.js"
+    },
+    "./anywhere": {
+      "types": "./dist/anywhere/index.d.ts",
+      "default": "./dist/anywhere/index.js"
     }
   },
   "scripts": {

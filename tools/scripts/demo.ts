@@ -8,6 +8,7 @@ import { FIXTURE_ROUTE_REGISTRY, openApiDocument } from "@superguide/fixture-app
 import {
   ConfirmationRegistry,
   EphemeralBus,
+  EventBus,
   PendingCalls,
   PostgresNotifier,
   RejectingIdentityVerifier,
@@ -196,13 +197,19 @@ async function main(): Promise<void> {
     SG_SESSION_SIGNING_KEY: read("SG_SESSION_SIGNING_KEY", Buffer.alloc(32, 7).toString("base64")),
     SG_SECRET_ENCRYPTION_KEY: read("SG_SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 9).toString("base64")),
     SG_WEBHOOK_SIGNING_KEY: read("SG_WEBHOOK_SIGNING_KEY", Buffer.alloc(32, 11).toString("base64")),
+    SG_DEVICE_SIGNING_KEY: read("SG_DEVICE_SIGNING_KEY", Buffer.alloc(32, 13).toString("base64")),
+    SG_ALLOWED_EXTENSION_IDS: read(
+      "SG_ALLOWED_EXTENSION_IDS",
+      "chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj",
+    ),
     SG_LOG_LEVEL: read("SG_LOG_LEVEL", "info"),
   });
 
   const logger = pino({ level: env.SG_LOG_LEVEL });
-  const { db, close } = createDatabase(env.SG_DATABASE_URL);
+  const { db, pool, close } = createDatabase(env.SG_DATABASE_URL);
   const notifier = new PostgresNotifier(env.SG_DATABASE_URL, logger);
   await notifier.start();
+  const anywhereBus = await EventBus.start(env.SG_DATABASE_URL);
 
   const ephemeral = new EphemeralBus();
   const pendingCalls = new PendingCalls();
@@ -238,6 +245,7 @@ async function main(): Promise<void> {
     env,
     logger,
     db,
+    pool,
     notifier,
     ephemeral,
     streams: new StreamRegistry(),
@@ -247,6 +255,11 @@ async function main(): Promise<void> {
     identityVerifier: new RejectingIdentityVerifier(),
     rateLimiters: createRateLimiters(),
     clock: { now: () => new Date() },
+    anywhere: {
+      bus: anywhereBus,
+      agent: null,
+      adapterSet: { version: 1, adapters: [] },
+    },
   });
 
   await listenOrExplain(
@@ -280,6 +293,7 @@ async function main(): Promise<void> {
   const shutdown = async (): Promise<void> => {
     await app.close();
     await notifier.stop();
+    await anywhereBus.stop();
     await close();
     await fixture.app.close();
     process.exit(0);

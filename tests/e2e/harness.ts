@@ -8,6 +8,7 @@ import { FIXTURE_ROUTE_REGISTRY, openApiDocument } from "../../apps/fixture-app/
 import { buildServer, type AppServer } from "../../apps/control-plane/src/server.js";
 import { parseEnvironment } from "../../apps/control-plane/src/env.js";
 import { createDatabase, withProduct, type DatabaseHandle } from "../../apps/control-plane/src/db/client.js";
+import { EventBus } from "../../apps/control-plane/src/anywhere/bus.js";
 import { PostgresNotifier } from "../../apps/control-plane/src/events/notifier.js";
 import { EphemeralBus } from "../../apps/control-plane/src/events/ephemeral.js";
 import { StreamRegistry } from "../../apps/control-plane/src/events/stream.js";
@@ -197,6 +198,8 @@ export async function startStack(options: E2EOptions = {}): Promise<E2EStack> {
     SG_SESSION_SIGNING_KEY: Buffer.alloc(32, 7).toString("base64"),
     SG_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64"),
     SG_WEBHOOK_SIGNING_KEY: Buffer.alloc(32, 11).toString("base64"),
+    SG_DEVICE_SIGNING_KEY: Buffer.alloc(32, 13).toString("base64"),
+    SG_ALLOWED_EXTENSION_IDS: "chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj",
     SG_LOG_LEVEL: process.env["E2E_LOG_LEVEL"] ?? "silent",
     SG_STEP_BUDGET: "8",
     SG_ENABLE_GROUNDED_ACTIONS: String(options.groundedActions ?? false),
@@ -206,6 +209,7 @@ export async function startStack(options: E2EOptions = {}): Promise<E2EStack> {
   const database: DatabaseHandle = createDatabase(env.SG_DATABASE_URL, 5);
   const notifier = new PostgresNotifier(env.SG_DATABASE_URL, logger);
   await notifier.start();
+  const anywhereBus = await EventBus.start(env.SG_DATABASE_URL);
 
   const ephemeral = new EphemeralBus();
   const pendingCalls = new PendingCalls();
@@ -240,6 +244,7 @@ export async function startStack(options: E2EOptions = {}): Promise<E2EStack> {
     env,
     logger,
     db: database.db,
+    pool: database.pool,
     notifier,
     ephemeral,
     streams: new StreamRegistry(),
@@ -253,6 +258,11 @@ export async function startStack(options: E2EOptions = {}): Promise<E2EStack> {
     rateLimiters: createRateLimiters(),
     clock: { now: () => new Date() },
     heartbeatIntervalMs: 5000,
+    anywhere: {
+      bus: anywhereBus,
+      agent: null,
+      adapterSet: { version: 1, adapters: [] },
+    },
   });
 
   await app.listen({ port: 0, host: "127.0.0.1" });
@@ -286,6 +296,7 @@ export async function startStack(options: E2EOptions = {}): Promise<E2EStack> {
     async close() {
       await app.close();
       await notifier.stop();
+      await anywhereBus.stop();
       await database.close();
       await fixture.app.close();
     },

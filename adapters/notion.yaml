@@ -1,0 +1,52 @@
+host: app.notion.com
+version: 3
+routes: []
+capabilities:
+  - id: settings.open
+    description: Open Settings & members by clicking Settings, then wait for the Connections tab
+    risk: write
+    route: /
+    params: []
+    steps:
+      - action: click
+        target: { role: button, name: "Settings" }
+      - action: waitFor
+        timeoutMs: 5000
+        predicate:
+          kind: element-present
+          target: { role: tab, name: "Connections" }
+    expect:
+      - kind: element-present
+        target: { role: tab, name: "Connections" }
+  - id: slack.connect
+    description: In Settings & members, open the Connections tab, click the Slack card, then click Get connection
+    risk: write
+    route: /
+    params: []
+    steps:
+      - action: waitFor
+        timeoutMs: 4000
+        predicate:
+          kind: element-present
+          target: { role: tab, name: "Connections" }
+      - action: click
+        target: { role: tab, name: "Connections" }
+      - action: waitFor
+        timeoutMs: 5000
+        predicate:
+          kind: text-matches
+          target: null
+          contains: Slack
+      - action: click
+        target: { role: button, name: "Slack" }
+      - action: waitFor
+        timeoutMs: 5000
+        predicate:
+          kind: element-present
+          target: { role: button, name: "Get connection" }
+      - action: click
+        target: { role: button, name: "Get connection" }
+    expect:
+      - kind: text-matches
+        target: null
+        contains: Slack

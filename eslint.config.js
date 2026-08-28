@@ -33,6 +33,7 @@ const NETWORK_GLOBALS = [
 const INTERNAL_PACKAGES = {
   contractPublic: "@superguide/contract/public",
   contractInternal: "@superguide/contract/internal",
+  contractAnywhere: "@superguide/contract/anywhere",
   policy: "@superguide/policy",
   procedures: "@superguide/procedures",
   observer: "@superguide/observer",
@@ -318,6 +319,7 @@ export default tseslint.config(
     [
       INTERNAL_PACKAGES.contractPublic,
       INTERNAL_PACKAGES.contractInternal,
+      INTERNAL_PACKAGES.contractAnywhere,
       INTERNAL_PACKAGES.policy,
       INTERNAL_PACKAGES.procedures,
     ],

@@ -2,6 +2,7 @@ export { createDatabase, withProduct, type Database, type DatabaseHandle } from 
 export { runMigrations } from "./db/migrate.js";
 export { parseEnvironment, type Environment } from "./env.js";
 export { buildServer, type AppServer, type ServerDependencies } from "./server.js";
+export { EventBus } from "./anywhere/bus.js";
 export { EphemeralBus } from "./events/ephemeral.js";
 export { PostgresNotifier } from "./events/notifier.js";
 export { StreamRegistry } from "./events/stream.js";

@@ -23,6 +23,17 @@ const KEY_OF_PROVIDER = {
   gemini: "GEMINI_API_KEY",
 } as const;
 
+const commaSeparatedOrigins = z
+  .string()
+  .min(1)
+  .transform((value) =>
+    value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  )
+  .refine((entries) => entries.length > 0, { message: "must list at least one extension origin" });
+
 export const environmentSchema = z
   .object({
     SG_DATABASE_URL: z.url(),
@@ -39,6 +50,12 @@ export const environmentSchema = z
     SG_ENABLE_GROUNDED_ACTIONS: z.stringbool().default(false),
     SG_STEP_BUDGET: z.coerce.number().int().positive().max(64).default(12),
     SG_LOG_LEVEL: z.enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+    SG_DEVICE_SIGNING_KEY: base64Key(32),
+    SG_DAILY_TASK_QUOTA: z.coerce.number().int().min(0).default(20),
+    SG_DAILY_IP_QUOTA: z.coerce.number().int().min(0).default(200),
+    SG_ALLOWED_EXTENSION_IDS: commaSeparatedOrigins,
+    SG_ANYWHERE_AGENT: z.enum(["on", "off"]).default("off"),
+    SG_ADAPTERS: z.enum(["on", "off"]).default("on"),
   })
   .superRefine((value, context) => {
     const keyName = KEY_OF_PROVIDER[value.SG_MODEL_PROVIDER];

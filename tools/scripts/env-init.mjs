@@ -16,6 +16,7 @@ const GENERATED = new Map([
   ["SG_SESSION_SIGNING_KEY", 32],
   ["SG_SECRET_ENCRYPTION_KEY", 32],
   ["SG_WEBHOOK_SIGNING_KEY", 32],
+  ["SG_DEVICE_SIGNING_KEY", 32],
 ]);
 
 const force = process.argv.includes("--force");

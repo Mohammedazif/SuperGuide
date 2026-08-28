@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { pino } from "pino";
 import { createDatabase, withProduct, type DatabaseHandle } from "../../apps/control-plane/src/db/client.js";
+import { EventBus } from "../../apps/control-plane/src/anywhere/bus.js";
 import { buildServer, type AppServer, type ServerDependencies } from "../../apps/control-plane/src/server.js";
 import { parseEnvironment, type Environment } from "../../apps/control-plane/src/env.js";
 import { PostgresNotifier } from "../../apps/control-plane/src/events/notifier.js";
@@ -20,6 +21,8 @@ import type { AgentAction } from "@superguide/contract/public";
 import { appDatabaseUrl, migrationDatabaseUrl } from "./database.js";
 
 export const TEST_ORIGIN = "https://app.example";
+export const TEST_EXTENSION_ORIGIN = "chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj";
+export const TEST_DEVICE_SIGNING_KEY = Buffer.alloc(32, 13).toString("base64");
 
 export function testEnvironment(overrides: Record<string, string> = {}): Environment {
   return parseEnvironment({
@@ -30,6 +33,8 @@ export function testEnvironment(overrides: Record<string, string> = {}): Environ
     SG_SESSION_SIGNING_KEY: Buffer.alloc(32, 7).toString("base64"),
     SG_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64"),
     SG_WEBHOOK_SIGNING_KEY: Buffer.alloc(32, 11).toString("base64"),
+    SG_DEVICE_SIGNING_KEY: TEST_DEVICE_SIGNING_KEY,
+    SG_ALLOWED_EXTENSION_IDS: TEST_EXTENSION_ORIGIN,
     SG_LOG_LEVEL: "silent",
     ...overrides,
   });
@@ -85,6 +90,7 @@ export interface TestHarness {
   baseUrl: string;
   deps: ServerDependencies;
   database: DatabaseHandle;
+  anywhereBus: EventBus;
   close: () => Promise<void>;
 }
 
@@ -99,6 +105,7 @@ export async function startHarness(options: {
   const database = createDatabase(env.SG_DATABASE_URL, 5);
   const notifier = new PostgresNotifier(env.SG_DATABASE_URL, logger);
   await notifier.start();
+  const anywhereBus = await EventBus.start(env.SG_DATABASE_URL);
 
   const ephemeral = new EphemeralBus();
   const streams = new StreamRegistry();
@@ -126,6 +133,7 @@ export async function startHarness(options: {
     env,
     logger,
     db: database.db,
+    pool: database.pool,
     notifier,
     ephemeral,
     streams,
@@ -136,6 +144,11 @@ export async function startHarness(options: {
     identityVerifier: options.identityVerifier ?? new RejectingIdentityVerifier(),
     clock: { now: () => new Date() },
     heartbeatIntervalMs: 1000,
+    anywhere: {
+      bus: anywhereBus,
+      agent: null,
+      adapterSet: { version: 1, adapters: [] },
+    },
   };
 
   const app = buildServer(deps);
@@ -148,9 +161,11 @@ export async function startHarness(options: {
     baseUrl: `http://127.0.0.1:${address.port}`,
     deps,
     database,
+    anywhereBus,
     close: async () => {
       await app.close();
       await notifier.stop();
+      await anywhereBus.stop();
       await database.close();
     },
   };

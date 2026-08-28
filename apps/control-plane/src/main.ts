@@ -1,6 +1,10 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadEnvironmentOrExit } from "./env.js";
 import { createLogger } from "./logging.js";
 import { createDatabase, withProduct } from "./db/client.js";
+import { EventBus } from "./anywhere/bus.js";
+import { loadAdapterDirectory } from "./anywhere/adapters-fs.js";
 import { PostgresNotifier } from "./events/notifier.js";
 import { EphemeralBus } from "./events/ephemeral.js";
 import { StreamRegistry } from "./events/stream.js";
@@ -22,9 +26,14 @@ import { WebhookEscalationSink } from "./escalation/sink.js";
 
 const SHUTDOWN_GRACE_MS = 15_000;
 
+const ADAPTERS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../adapters");
+
 const env = loadEnvironmentOrExit();
 const logger = createLogger(env);
-const { db, close: closeDatabase } = createDatabase(env.SG_DATABASE_URL);
+const { db, pool, close: closeDatabase } = createDatabase(env.SG_DATABASE_URL);
+const anywhereBus = await EventBus.start(env.SG_DATABASE_URL);
+const adapterSet =
+  env.SG_ADAPTERS === "on" ? loadAdapterDirectory(ADAPTERS_DIR) : { version: 1, adapters: [] };
 
 const notifier = new PostgresNotifier(env.SG_DATABASE_URL, logger);
 const ephemeral = new EphemeralBus();
@@ -72,12 +81,14 @@ const app = buildServer({
   env,
   logger,
   db,
+  pool,
   notifier,
   ephemeral,
   streams,
   pendingCalls,
   confirmations,
   turnRunner,
+  anywhere: { bus: anywhereBus, agent: null, adapterSet },
   rateLimiters: createRateLimiters(),
   identityVerifier: new AsymmetricIdentityVerifier({
     logger,
@@ -127,6 +138,7 @@ async function shutdown(signal: string): Promise<void> {
   });
 
   await notifier.stop();
+  await anywhereBus.stop();
   await closeDatabase();
   logger.info({ abandoned, undecided, closed }, "shutdown complete");
   process.exit(0);

@@ -48,6 +48,8 @@ function environment(task: EvalTask, databaseUrl: string, migrationUrl: string) 
     SG_SESSION_SIGNING_KEY: Buffer.alloc(32, 7).toString("base64"),
     SG_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64"),
     SG_WEBHOOK_SIGNING_KEY: Buffer.alloc(32, 11).toString("base64"),
+    SG_DEVICE_SIGNING_KEY: Buffer.alloc(32, 13).toString("base64"),
+    SG_ALLOWED_EXTENSION_IDS: "chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj",
     SG_LOG_LEVEL: "silent",
     SG_STEP_BUDGET: String(task.stepBudget),
     SG_ENABLE_GROUNDED_ACTIONS: String(task.groundedActions),
