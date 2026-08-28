@@ -25,14 +25,12 @@ describe("SQL quoting", () => {
 });
 
 describe("hosted role SQL", () => {
-  it("creates and updates a login without BYPASSRLS flags", () => {
+  it("creates and updates a login with LOGIN and PASSWORD only", () => {
     expect(createLoginRoleSql("sg_app", "secret")).toBe(
       "CREATE ROLE \"sg_app\" LOGIN PASSWORD 'secret'",
     );
     expect(alterLoginPasswordSql("sg_app", "secret")).toBe(
       "ALTER ROLE \"sg_app\" LOGIN PASSWORD 'secret'",
     );
-    expect(createLoginRoleSql("sg_app", "secret")).not.toMatch(/BYPASSRLS|SUPERUSER|CREATEDB/i);
-    expect(alterLoginPasswordSql("sg_app", "secret")).not.toMatch(/BYPASSRLS|SUPERUSER|CREATEDB/i);
   });
 });
