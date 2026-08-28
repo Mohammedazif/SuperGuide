@@ -140,6 +140,29 @@ Open any site (the SuperGuide fixture at `http://127.0.0.1:8099` is a good one).
 
 ---
 
+## Hosted (before first deploy)
+
+The API image bootstraps `sg_app` / `sg_migrator` and runs migrations on start. You still need a
+Postgres with `vector`, a **direct** (not pooled) connection, and a Render **Starter** (or larger)
+web service from `render.yaml`. Do not use Render's free instance: it sleeps and drops in-flight
+turns.
+
+```bash
+pnpm env:init                 # once; then fill the model key
+# Set SG_DATABASE_URL to postgres://sg_app:...@db.<ref>.supabase.co:5432/postgres?sslmode=require
+# Set SG_MIGRATION_DATABASE_URL to postgres://postgres:...@db.<ref>.supabase.co:5432/postgres?sslmode=require
+# On Render, SG_PUBLIC_ORIGIN can stay unset (RENDER_EXTERNAL_URL is used). Set it for a custom domain.
+pnpm db:bootstrap             # optional from a laptop; the container also does this
+pnpm db:migrate               # optional from a laptop; the container also does this
+```
+
+`SG_ALLOWED_EXTENSION_IDS` is already the stable Chrome ID from the extension manifest key
+(`chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj`). Rebuild the extension with
+`SGA_API_BASE=https://<service>.onrender.com pnpm run build` in SuperGuide Anywhere.
+
+Keep `numInstances: 1`. Do not proxy the API hostname through Cloudflare (grey-cloud / DNS only);
+SSE needs an unbuffered connection.
+
 ## Tests
 
 From SuperGuide:

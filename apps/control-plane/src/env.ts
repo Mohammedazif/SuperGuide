@@ -61,7 +61,9 @@ export const environmentSchema = z
     SG_WEBHOOK_SIGNING_KEY: base64Key(32),
     SG_ENABLE_GROUNDED_ACTIONS: z.stringbool().default(false),
     SG_STEP_BUDGET: z.coerce.number().int().positive().max(64).default(12),
-    SG_LOG_LEVEL: z.enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+    SG_LOG_LEVEL: z
+      .enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"])
+      .default("info"),
     SG_DEVICE_SIGNING_KEY: base64Key(32),
     SG_DAILY_TASK_QUOTA: z.coerce.number().int().min(0).default(20),
     SG_DAILY_IP_QUOTA: z.coerce.number().int().min(0).default(200),
@@ -82,8 +84,25 @@ export const environmentSchema = z
 
 export type Environment = z.infer<typeof environmentSchema>;
 
+function nonempty(value: string | undefined): string | undefined {
+  return value !== undefined && value.length > 0 ? value : undefined;
+}
+
+// Render injects PORT and RENDER_EXTERNAL_URL. Do not set SG_PORT in the Blueprint.
+export function withPlatformDefaults(
+  source: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  const port = nonempty(source["SG_PORT"]) ?? nonempty(source["PORT"]);
+  const origin = nonempty(source["SG_PUBLIC_ORIGIN"]) ?? nonempty(source["RENDER_EXTERNAL_URL"]);
+  return {
+    ...source,
+    ...(port === undefined ? {} : { SG_PORT: port }),
+    ...(origin === undefined ? {} : { SG_PUBLIC_ORIGIN: origin }),
+  };
+}
+
 export function parseEnvironment(source: Record<string, string | undefined>): Environment {
-  const parsed = environmentSchema.safeParse(source);
+  const parsed = environmentSchema.safeParse(withPlatformDefaults(source));
   if (parsed.success) return parsed.data;
 
   const issues = parsed.error.issues
@@ -104,6 +123,25 @@ export function loadMigrationConnectionString(): string {
     throw new EnvironmentError("SG_MIGRATION_DATABASE_URL or SG_DATABASE_URL must be set");
   }
   return url;
+}
+
+export function shouldBootstrapRoles(): boolean {
+  loadRepoDotEnv();
+  const flag = (process.env["SG_BOOTSTRAP_ROLES"] ?? "1").toLowerCase();
+  return flag !== "0" && flag !== "false";
+}
+
+export function loadBootstrapConnectionStrings(): { app: string; migration: string } {
+  loadRepoDotEnv();
+  const app = process.env["SG_DATABASE_URL"];
+  const migration = process.env["SG_MIGRATION_DATABASE_URL"];
+  if (app === undefined || app.length === 0) {
+    throw new EnvironmentError("SG_DATABASE_URL must be set to bootstrap roles");
+  }
+  if (migration === undefined || migration.length === 0) {
+    throw new EnvironmentError("SG_MIGRATION_DATABASE_URL must be set to bootstrap roles");
+  }
+  return { app, migration };
 }
 
 export function loadEnvironmentOrExit(): Environment {

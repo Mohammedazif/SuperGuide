@@ -1,0 +1,55 @@
+# One instance only: turn state, confirmations, and SSE live in process memory.
+# Use Starter or larger (always on). The free instance sleeps and drops in-flight turns.
+# Do not set SG_PORT: Render injects PORT. SG_PUBLIC_ORIGIN falls back to RENDER_EXTERNAL_URL.
+# Secrets (sync: false) are filled in the Render dashboard after the first Blueprint apply.
+
+services:
+  - type: web
+    name: superguide
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /health
+    dockerfilePath: ./Dockerfile
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SG_LOG_LEVEL
+        value: info
+      - key: SG_ANYWHERE_AGENT
+        value: "on"
+      - key: SG_ADAPTERS
+        value: "on"
+      - key: SG_ENABLE_GROUNDED_ACTIONS
+        value: "false"
+      - key: SG_STEP_BUDGET
+        value: "12"
+      - key: SG_DAILY_TASK_QUOTA
+        value: "20"
+      - key: SG_DAILY_IP_QUOTA
+        value: "200"
+      - key: SG_BOOTSTRAP_ROLES
+        value: "1"
+      - key: SG_MODEL_PROVIDER
+        value: anthropic
+      - key: SG_ALLOWED_EXTENSION_IDS
+        value: chrome-extension://ghdcebndlanhmdeajdbbemcaihpenhoj
+      - key: SG_DATABASE_URL
+        sync: false
+      - key: SG_MIGRATION_DATABASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SG_SESSION_SIGNING_KEY
+        sync: false
+      - key: SG_SECRET_ENCRYPTION_KEY
+        sync: false
+      - key: SG_WEBHOOK_SIGNING_KEY
+        sync: false
+      - key: SG_DEVICE_SIGNING_KEY
+        sync: false

@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEnvironmentOrExit } from "./env.js";
@@ -30,7 +31,10 @@ import { WebhookEscalationSink } from "./escalation/sink.js";
 
 const SHUTDOWN_GRACE_MS = 15_000;
 
-const ADAPTERS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../adapters");
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ADAPTERS_DIR = join(HERE, "../../../adapters");
+const WIDGET_JS_PATH = join(HERE, "../../../apps/widget/dist/widget.js");
+const widgetJs = existsSync(WIDGET_JS_PATH) ? readFileSync(WIDGET_JS_PATH) : undefined;
 
 const env = loadEnvironmentOrExit();
 const logger = createLogger(env);
@@ -119,6 +123,7 @@ const app = buildServer({
       })),
   }),
   clock: { now: () => new Date() },
+  ...(widgetJs === undefined ? {} : { widgetJs }),
 });
 
 await app.listen({ port: env.SG_PORT, host: "0.0.0.0" });

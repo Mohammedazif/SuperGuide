@@ -20,11 +20,7 @@ import { ApiFailure } from "./errors.js";
 import type { AppLogger } from "./logging.js";
 import type { Environment } from "./env.js";
 import { checkOrigin } from "./auth/origin.js";
-import {
-  signSessionToken,
-  verifySessionToken,
-  type SessionClaims,
-} from "./auth/session-token.js";
+import { signSessionToken, verifySessionToken, type SessionClaims } from "./auth/session-token.js";
 import type { IdentityVerifier } from "./auth/identity-verifier.js";
 import type { RateLimiters } from "./auth/rate-limit.js";
 import { findProduct } from "./repository/products.js";
@@ -68,6 +64,7 @@ export interface ServerDependencies {
   anywhere: AnywhereSurface;
   sessionTtlSeconds?: number;
   heartbeatIntervalMs?: number;
+  widgetJs?: Buffer;
 }
 
 declare module "fastify" {
@@ -113,7 +110,12 @@ function bearerFrom(request: RequestLike): string | null {
   return null;
 }
 
-export type AppServer = FastifyInstance<RawServerDefault, IncomingMessage, ServerResponse, AppLogger>;
+export type AppServer = FastifyInstance<
+  RawServerDefault,
+  IncomingMessage,
+  ServerResponse,
+  AppLogger
+>;
 
 export function buildServer(deps: ServerDependencies): AppServer {
   const app = Fastify({
@@ -138,9 +140,7 @@ export function buildServer(deps: ServerDependencies): AppServer {
       return;
     }
     request.log.error({ err: error }, "unhandled request error");
-    void reply
-      .status(500)
-      .send({ error: { code: "internal_error", message: "Internal error." } });
+    void reply.status(500).send({ error: { code: "internal_error", message: "Internal error." } });
   });
 
   registerAnywhereRoutes(app, {
@@ -199,7 +199,9 @@ export function buildServer(deps: ServerDependencies): AppServer {
     const nowSeconds = Math.floor(deps.clock.now().getTime() / 1000);
     const verification = verifySessionToken(sessionKey, token, nowSeconds);
     if (!verification.ok) {
-      throw new ApiFailure(verification.reason === "expired" ? "session_expired" : "session_invalid");
+      throw new ApiFailure(
+        verification.reason === "expired" ? "session_expired" : "session_invalid",
+      );
     }
 
     const product = request.sgProduct;
@@ -235,6 +237,16 @@ export function buildServer(deps: ServerDependencies): AppServer {
   app.options("/v1", (_request, reply) => reply.status(204).send());
 
   app.get("/health", () => ({ status: "ok" }));
+
+  if (deps.widgetJs !== undefined) {
+    const widgetJs = deps.widgetJs;
+    app.get("/widget.js", (_request, reply) =>
+      reply
+        .type("text/javascript; charset=utf-8")
+        .header("cache-control", "public, max-age=300")
+        .send(widgetJs),
+    );
+  }
 
   app.get("/ready", async (_request, reply) => {
     try {
@@ -565,8 +577,7 @@ export function buildServer(deps: ServerDependencies): AppServer {
           resolutionState: row.resolutionState,
           createdAt: row.createdAt.toISOString(),
           closedAt: row.closedAt === null ? null : row.closedAt.toISOString(),
-          lastMessagePreview:
-            latest === undefined ? "" : latest.message.content.text.slice(0, 160),
+          lastMessagePreview: latest === undefined ? "" : latest.message.content.text.slice(0, 160),
         });
       }
       return summaries;

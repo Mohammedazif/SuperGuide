@@ -212,8 +212,9 @@ export function registerAnywhereRoutes(app: AppServer, deps: AnywhereRouteDeps):
     const allowOrigin = reply.getHeader("access-control-allow-origin");
     raw.writeHead(200, {
       "content-type": "text/event-stream",
-      "cache-control": "no-store",
+      "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
+      "x-accel-buffering": "no",
       "access-control-allow-origin": typeof allowOrigin === "string" ? allowOrigin : "",
       vary: "origin",
     });
@@ -340,5 +341,3 @@ export function registerAnywhereRoutes(app: AppServer, deps: AnywhereRouteDeps):
     await reply.status(200).send(adapterSet);
   });
 }
-
-

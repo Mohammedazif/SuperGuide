@@ -1,0 +1,12 @@
+{
+  "description": "If Cloudflare proxies the API, bypass cache on SSE. Prefer DNS-only (grey cloud) for the API hostname; the proxy idle-timeouts long streams on lower plans.",
+  "rules": [
+    {
+      "action": "set_cache_settings",
+      "action_parameters": { "cache": false },
+      "description": "Do not cache SuperGuide event streams",
+      "enabled": true,
+      "expression": "(http.request.uri.path eq \"/v1/stream\") or (starts_with(http.request.uri.path, \"/v1/anywhere/stream\"))"
+    }
+  ]
+}
