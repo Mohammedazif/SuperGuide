@@ -21,7 +21,8 @@
     "test:unit": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project unit",
     "test:integration": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project integration",
     "test:security": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --project security",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=widget",
+    "test:e2e:extension": "playwright test --project=extension",
     "eval": "node --env-file-if-exists=.env --import tsx eval/harness/src/cli.ts",
     "check:forbidden": "node tools/scripts/check-forbidden.mjs",
     "check:bundle-boundary": "node tools/scripts/check-bundle-boundary.mjs",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.62.1",
+    "@types/chrome": "^0.2.7",
     "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "^3.2.7",
     "fast-check": "^4.9.0",

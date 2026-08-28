@@ -12,5 +12,12 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "widget", testMatch: /widget\.spec\.ts/ },
+    {
+      name: "extension",
+      testMatch: /extension\/.*\.spec\.ts/,
+      timeout: 120_000,
+    },
+  ],
 });

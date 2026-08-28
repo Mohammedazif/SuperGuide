@@ -11,7 +11,8 @@
       "DOM.Iterable"
     ],
     "types": [
-      "node"
+      "node",
+      "chrome"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "preact"

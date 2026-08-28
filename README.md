@@ -40,7 +40,8 @@ apps/widget          the IIFE bundle and the boot contract
 apps/console         the support-lead surface
 apps/fixture-app     a test-target SaaS with a real API, an OpenAPI document, and two interface variants
 packages/contract    Zod schemas for every wire and storage shape, split public and internal
-packages/policy      the pure verdict function
+packages/policy      the pure verdict function (widget + extension)
+packages/adapters    site adapters for the extension surface
 packages/procedures  the procedure schema, loader, and matcher
 packages/observer    DOM to page digest, read only
 packages/executor    the closed action vocabulary
@@ -48,6 +49,8 @@ packages/client-core transport, stream, durability, dispatch
 packages/widget-ui   the chat surface, in a closed shadow root
 eval/                thirty task fixtures and the harness that scores them
 ```
+
+One process serves two clients. The widget uses `/v1`. The Chrome extension (still in the SuperGuide-Anywhere repo until the monorepo move) uses `/v1/anywhere`.
 
 ## Seeing it work
 
