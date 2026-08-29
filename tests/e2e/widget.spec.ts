@@ -290,7 +290,6 @@ test.describe("the widget in a real browser", () => {
     await ask(page, "Set our company registration number to SC441122.");
 
     await approve(page);
-    await approve(page);
 
     const finished = await waitForTurn(page);
     expect(finished.detail["resolutionState"]).toBe("resolved");
@@ -328,7 +327,6 @@ test.describe("the widget in a real browser", () => {
     await identify(page, stack);
     await ask(page, "Set our company registration number to NI778899.");
 
-    await approve(page);
     await approve(page);
 
     const finished = await waitForTurn(page);

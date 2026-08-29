@@ -32,6 +32,7 @@ export interface PolicyInput {
   identity: PolicyIdentity;
   productPolicy: ProductPolicy;
   signals: readonly string[];
+  writeConsent: boolean;
 }
 
 export const DEFAULT_PRODUCT_POLICY: ProductPolicy = {
@@ -155,6 +156,10 @@ export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
       reason: "write_requires_confirmation",
       preview: previewFor(input.action),
     };
+  }
+
+  if (input.action.risk !== "read" && input.writeConsent) {
+    return { decision: "allow" };
   }
 
   if (input.action.risk !== "read" && input.productPolicy.confirmEveryWrite) {

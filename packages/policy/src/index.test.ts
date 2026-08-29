@@ -35,6 +35,7 @@ function input(overrides: Partial<PolicyInput> = {}): PolicyInput {
     identity: { tier: "verified", scopes: [] },
     productPolicy: DEFAULT_PRODUCT_POLICY,
     signals: [],
+    writeConsent: false,
     ...overrides,
   };
 }
@@ -169,6 +170,48 @@ describe("evaluatePolicy", () => {
         toolName: "ui_click",
         compiledToolNames: ["ui_click"],
         identity: { tier: "anonymous", scopes: [] },
+      }),
+    );
+    expect(verdict.decision).toBe("confirm");
+    if (verdict.decision === "confirm") expect(verdict.reason).toBe("write_requires_confirmation");
+  });
+
+  it("lets later ordinary writes through after one approval, like the extension", () => {
+    expect(
+      evaluatePolicy(
+        input({
+          action: {
+            type: "click",
+            toolCallId: "toolu_1",
+            intent: "Go to the next step.",
+            expect: [{ kind: "capability_status", status: "ok" }],
+            risk: "write",
+            timeoutMs: 20_000,
+            ref: "e2",
+          },
+          toolName: "ui_click",
+          compiledToolNames: ["ui_click"],
+          writeConsent: true,
+        }),
+      ),
+    ).toEqual({ decision: "allow" });
+  });
+
+  it("still asks before delete or buy after write consent", () => {
+    const verdict = evaluatePolicy(
+      input({
+        action: {
+          type: "click",
+          toolCallId: "toolu_1",
+          intent: "Delete this project.",
+          expect: [{ kind: "capability_status", status: "ok" }],
+          risk: "write",
+          timeoutMs: 20_000,
+          ref: "e1",
+        },
+        toolName: "ui_click",
+        compiledToolNames: ["ui_click"],
+        writeConsent: true,
       }),
     );
     expect(verdict.decision).toBe("confirm");

@@ -344,6 +344,7 @@ export async function runTurn(
   let observation: PageDigest | null = context.digest;
   let previousStepFailed = false;
   let lastActionParameters: Record<string, unknown> = {};
+  let writeConsent = false;
   const signals: string[] = [];
 
   for (let stepIndex = 0; stepIndex < deps.env.SG_STEP_BUDGET; stepIndex += 1) {
@@ -435,6 +436,7 @@ export async function runTurn(
       identity: { tier: identity.tier, scopes: identity.scopes },
       productPolicy: DEFAULT_PRODUCT_POLICY,
       signals,
+      writeConsent,
     });
 
     if (verdict.decision === "block") {
@@ -602,7 +604,10 @@ export async function runTurn(
         await announceEscalation(decision === "denied" ? "confirmation_denied" : "confirmation_timeout", detail);
         return { resolutionState: "escalated", summary: detail, closeConversation: true };
       }
+      writeConsent = true;
     }
+
+    if (action.risk !== "read") writeConsent = true;
 
     const result = await ladder.execute(action, {
       productId: context.productId,
