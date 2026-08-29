@@ -136,7 +136,8 @@ const GROUNDED_SCHEMAS: Record<
     required: ["ref"],
   },
   wait_for: {
-    description: "Wait until an element with a role and name appears.",
+    description:
+      "Wait until an element with a role and name appears. nameContains must be a substring of a name already in the digest or in the person's request. If the digest already lists the control, click or fill it instead of waiting. Do not guess common labels such as Create, Save, Submit, or Confirm.",
     properties: { role: { type: "string" }, nameContains: { type: "string" } },
     required: ["role", "nameContains"],
   },

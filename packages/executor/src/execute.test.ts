@@ -302,6 +302,26 @@ describe("the action executor", () => {
     expect(outcome.error.code).toBe("TIMEOUT");
   });
 
+  it("does not wait out the full timeout when the role is already present under other names", async () => {
+    const executor = build();
+    const started = Date.now();
+    const outcome = await executor.execute(
+      envelope({
+        type: "wait_for",
+        role: "button",
+        nameContains: "Create",
+        timeoutMs: 8_000,
+        risk: "read",
+      }),
+    );
+    expect(Date.now() - started).toBeLessThan(4_000);
+    expect(outcome.status).toBe("failed");
+    if (outcome.status !== "failed") return;
+    expect(outcome.error.code).toBe("TIMEOUT");
+    expect(outcome.error.message).toContain("visible buttons: Save changes");
+    expect(outcome.error.message).not.toMatch(/^no button named like Create appeared$/);
+  });
+
   it("returns a fresh digest after a mutating action", async () => {
     const executor = build();
     const save = document.getElementById("save");

@@ -90,6 +90,19 @@ describe("the cached prompt prefix", () => {
     expect(rendered).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/);
   });
 
+  it("tells the model to work from the digest when grounded actions are on and no procedure matched", () => {
+    const prefix = buildCachedPrefix({
+      ...input,
+      groundedActionsEnabled: true,
+      procedure: null,
+    });
+    const product = prefix.system[1]?.text ?? "";
+    expect(product).toContain("latest page digest");
+    expect(product).toContain("Do not guess common submit labels");
+    expect(product).toContain("Work from the latest digest");
+    expect(product).not.toContain("escalate rather than improvising");
+  });
+
   it("neutralises an envelope that tries to close itself early", () => {
     const rendered = renderProvenanceEnvelope({
       source: "knowledge_base",

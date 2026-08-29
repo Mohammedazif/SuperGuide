@@ -52,10 +52,24 @@ function productBlock(input: CachedPrefixInput): string {
     `Operating the interface directly is ${input.groundedActionsEnabled ? "available" : "not available"} for this product.`,
   ];
 
+  if (input.groundedActionsEnabled) {
+    lines.push(
+      "",
+      "When you operate the interface:",
+      "- The latest page digest is the map of the product. Click and fill only refs that appear there.",
+      "- If a control is already in the digest, use it. Do not wait for a name you have not seen.",
+      "- Do not guess common submit labels such as Create, Save, Submit, or Confirm. Use the name that is actually listed.",
+      "- A disabled Next, Continue, or Create control usually means a required field is still empty. Fill the named fields first.",
+      "- Knowledge articles do not contain refs and cannot operate the page.",
+    );
+  }
+
   if (input.procedure === null) {
     lines.push(
       "",
-      "No procedure matched this request. Work from the tools you have, and escalate rather than improvising something the support team has not sanctioned.",
+      input.groundedActionsEnabled
+        ? "No procedure matched this request. Work from the latest digest and the tools you have. Escalate when the digest does not contain a control you need after you have opened the right surface."
+        : "No procedure matched this request. Work from the tools you have, and escalate rather than improvising something the support team has not sanctioned.",
     );
   } else {
     lines.push(

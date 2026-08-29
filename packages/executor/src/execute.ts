@@ -288,22 +288,47 @@ export class ActionExecutor {
         const startedAt = Date.now();
         const needle = action.nameContains.toLowerCase();
 
-        for (;;) {
-          const digest = this.digest();
-          const found = digest.elements.some(
+        const matches = (digest: PageDigest): boolean =>
+          digest.elements.some(
             (element) =>
               element.role === action.role && element.name.toLowerCase().includes(needle),
           );
-          if (found) return { status: "ok", data: { waited: true }, digest, url };
-          if (Date.now() - startedAt > deadline) {
+
+        const namesOfRole = (digest: PageDigest): string[] => {
+          const names: string[] = [];
+          for (const element of digest.elements) {
+            if (element.role !== action.role || element.name.length === 0) continue;
+            if (!names.includes(element.name)) names.push(element.name);
+            if (names.length >= 8) break;
+          }
+          return names;
+        };
+
+        let digest = this.digest();
+        if (matches(digest)) return { status: "ok", data: { waited: true }, digest, url };
+
+        // If this role is already on the page under other names, a guessed label
+        // (Create, Save, Submit) will not appear. Do not burn the full timeout.
+        const sameRolePresent = digest.elements.some((element) => element.role === action.role);
+        const limit = sameRolePresent ? Math.min(deadline, 1_500) : deadline;
+
+        for (;;) {
+          if (Date.now() - startedAt > limit) {
+            const visible = namesOfRole(digest);
+            const seen =
+              visible.length === 0
+                ? `no ${action.role} is in the digest`
+                : `visible ${action.role}s: ${visible.join(", ")}`;
             return failure(
               "TIMEOUT",
-              `no ${action.role} named like ${action.nameContains} appeared`,
+              `no ${action.role} named like ${action.nameContains} appeared (${seen})`,
               digest,
               url,
             );
           }
           await new Promise((resolve) => setTimeout(resolve, 100));
+          digest = this.digest();
+          if (matches(digest)) return { status: "ok", data: { waited: true }, digest, url };
         }
       }
 
