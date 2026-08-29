@@ -122,22 +122,136 @@ describe("the page digest", () => {
   });
 
   it("keeps an open dialog's controls instead of the crowded page behind it", () => {
-    const cards = Array.from({ length: 40 }, (_, index) => `<button>Project ${index}</button>`).join("");
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Row ${index}</button>`).join("");
     render(`
       <main>${cards}</main>
-      <div role="dialog" aria-label="Create New Project">
-        <label for="project-name">Project Name</label>
-        <input id="project-name">
-        <label for="total-plot-area">Total Plot Area</label>
-        <input id="total-plot-area" type="number">
-        <button>Next Step</button>
+      <div role="dialog" aria-label="Account settings">
+        <label for="display-name">Display name</label>
+        <input id="display-name">
+        <label for="email">Email</label>
+        <input id="email" type="email">
+        <button>Save</button>
       </div>
     `);
     const digest = observer.observe(document, { maxElements: 10 });
     const names = digest.elements.map((element) => element.name);
-    expect(names).toContain("Project Name");
-    expect(names).toContain("Next Step");
-    expect(names.some((name) => /^Project \d+$/.test(name))).toBe(false);
+    expect(names).toContain("Display name");
+    expect(names).toContain("Save");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
+  it("treats aria-modal as an open overlay even without role=dialog", () => {
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    render(`
+      <main>${cards}</main>
+      <div aria-modal="true" aria-label="Invite teammate">
+        <label for="invite-email">Teammate email</label>
+        <input id="invite-email" type="email">
+        <button>Send invite</button>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 8 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Teammate email");
+    expect(names).toContain("Send invite");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
+  it("scopes to a native open dialog and ignores a closed one", () => {
+    const cards = Array.from({ length: 20 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    render(`
+      <main>${cards}</main>
+      <dialog>
+        <label for="hidden-field">Should not appear</label>
+        <input id="hidden-field">
+        <button>Abandoned</button>
+      </dialog>
+    `);
+    const closed = observer.observe(document, { maxElements: 8 });
+    expect(closed.elements.map((element) => element.name)).toContain("Row 0");
+    expect(closed.elements.map((element) => element.name)).not.toContain("Abandoned");
+
+    render(`
+      <main>${cards}</main>
+      <dialog open>
+        <label for="workspace-name">Workspace name</label>
+        <input id="workspace-name">
+        <button>Create workspace</button>
+      </dialog>
+    `);
+    const opened = observer.observe(document, { maxElements: 8 });
+    const names = opened.elements.map((element) => element.name);
+    expect(names).toContain("Workspace name");
+    expect(names).toContain("Create workspace");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
+  it("keeps unnamed form controls and unnamed buttons that sit inside a modal", () => {
+    render(`
+      <main>
+        <button aria-label=""></button>
+        <button>Visible page action</button>
+      </main>
+      <div role="dialog" aria-label="Filter results">
+        <button role="combobox" aria-expanded="false"></button>
+        <input>
+        <button></button>
+        <button>Apply filters</button>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 12 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Apply filters");
+    expect(names).toContain("Filter results");
+    expect(names).not.toContain("Visible page action");
+
+    const combobox = digest.elements.find((element) => element.role === "combobox");
+    expect(combobox).toBeDefined();
+    expect(combobox?.name).toBe("");
+
+    const textbox = digest.elements.find((element) => element.role === "textbox");
+    expect(textbox).toBeDefined();
+
+    expect(digest.elements.some((element) => element.role === "button" && element.name === "")).toBe(
+      true,
+    );
+  });
+
+  it("keeps a portaled listbox that rendered outside the open dialog", () => {
+    const cards = Array.from({ length: 30 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    render(`
+      <main>${cards}</main>
+      <div role="dialog" aria-label="Share document">
+        <button role="combobox" aria-expanded="true" aria-label="Role">Role</button>
+      </div>
+      <div role="listbox" aria-label="Role options">
+        <div role="option">Admin</div>
+        <div role="option">Viewer</div>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 10 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Role");
+    expect(names).toContain("Admin");
+    expect(names).toContain("Viewer");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
+  it("still reports unnamed comboboxes on a page with no modal", () => {
+    render(`
+      <label for="named">Country</label>
+      <select id="named"><option>Kenya</option></select>
+      <button role="combobox" aria-expanded="false"></button>
+      <button></button>
+    `);
+    const digest = observer.observe(document);
+    expect(digest.elements.some((element) => element.role === "combobox" && element.name === "")).toBe(
+      true,
+    );
+    expect(digest.elements.some((element) => element.name === "Country")).toBe(true);
+    expect(digest.elements.some((element) => element.role === "button" && element.name === "")).toBe(
+      false,
+    );
   });
 
   it("caps the element list and says so honestly", () => {

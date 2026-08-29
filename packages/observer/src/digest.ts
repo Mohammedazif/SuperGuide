@@ -21,6 +21,35 @@ interface Candidate {
 
 const DEFAULT_MAX_ELEMENTS = 120;
 
+// Form-like controls are kept even when they have no accessible name: hosts
+// often leave comboboxes and text fields unlabeled. Decorative unnamed buttons
+// stay out unless they sit in a modal.
+const NAMELESS_KEEP_ROLES = new Set([
+  "textbox",
+  "searchbox",
+  "combobox",
+  "listbox",
+  "spinbutton",
+  "dialog",
+  "alertdialog",
+  "switch",
+  "slider",
+  "checkbox",
+  "radio",
+]);
+
+// Select and menu content is often portaled to document.body, outside the dialog.
+const PORTALED_POPUP_ROLES = new Set([
+  "listbox",
+  "menu",
+  "tree",
+  "grid",
+  "option",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+]);
+
 function isVisible(element: Element): boolean {
   const view = element.ownerDocument.defaultView;
   if (view === null) return true;
@@ -30,6 +59,64 @@ function isVisible(element: Element): boolean {
   if (element.hasAttribute("hidden")) return false;
   if (element.getAttribute("aria-hidden") === "true") return false;
   return true;
+}
+
+function composedAncestors(element: Element): Element[] {
+  const ancestors: Element[] = [];
+  let current: Node = element;
+  for (;;) {
+    if (current.nodeType === 1) ancestors.push(current as Element);
+    const parent = current.parentNode;
+    if (parent !== null) {
+      current = parent;
+      continue;
+    }
+    const root = current.getRootNode();
+    if (root !== current && "host" in root) {
+      current = (root as ShadowRoot).host;
+      continue;
+    }
+    break;
+  }
+  return ancestors;
+}
+
+function isInertOrAriaHidden(element: Element): boolean {
+  for (const ancestor of composedAncestors(element)) {
+    if (ancestor.hasAttribute("inert")) return true;
+    if (ancestor.getAttribute("aria-hidden") === "true") return true;
+  }
+  return false;
+}
+
+function isNativeDialogOpen(element: Element): boolean {
+  if (element.tagName !== "DIALOG") return false;
+  return (element as HTMLDialogElement).open;
+}
+
+function isInsideClosedNativeDialog(element: Element): boolean {
+  for (const ancestor of composedAncestors(element)) {
+    if (ancestor.tagName === "DIALOG" && !isNativeDialogOpen(ancestor)) return true;
+  }
+  return false;
+}
+
+// Any host's modal: native <dialog open>, role=dialog|alertdialog, or aria-modal.
+function isOpenModalRoot(element: Element): boolean {
+  if (!isVisible(element) || isInsideClosedNativeDialog(element)) return false;
+  if (isNativeDialogOpen(element)) return true;
+  const role = roleOf(element);
+  if (role === "dialog" || role === "alertdialog") return true;
+  return element.getAttribute("aria-modal") === "true";
+}
+
+function isInsideRoots(element: Element, roots: readonly Element[]): boolean {
+  if (roots.length === 0) return false;
+  const set = new Set(roots);
+  for (const ancestor of composedAncestors(element)) {
+    if (set.has(ancestor)) return true;
+  }
+  return false;
 }
 
 function inViewport(element: Element): boolean {
@@ -138,6 +225,7 @@ export class PageObserver {
     const allowlist = new Set((options.valueAllowlist ?? []).map((entry) => entry.toLowerCase()));
 
     const candidates: Candidate[] = [];
+    const overlayRoots: Element[] = [];
     const headings: string[] = [];
     const landmarks: string[] = [];
     let order = 0;
@@ -160,9 +248,19 @@ export class PageObserver {
           }
         }
 
+        if (isOpenModalRoot(element) && !overlayRoots.includes(element)) {
+          overlayRoots.push(element);
+        }
+
         const role = roleOf(element);
         if (role === null) continue;
-        if (!isVisible(element)) continue;
+        if (
+          !isVisible(element) ||
+          isInertOrAriaHidden(element) ||
+          isInsideClosedNativeDialog(element)
+        ) {
+          continue;
+        }
 
         const name = accessibleName(element);
 
@@ -176,14 +274,6 @@ export class PageObserver {
           continue;
         }
         if (!isInteractiveRole(role) && !isObservableRole(role)) continue;
-        if (
-          name.length === 0 &&
-          role !== "textbox" &&
-          role !== "dialog" &&
-          role !== "alertdialog"
-        ) {
-          continue;
-        }
 
         candidates.push({
           element,
@@ -199,16 +289,22 @@ export class PageObserver {
 
     visit(document, 0);
 
-    const dialogRoots = candidates
-      .filter((candidate) => candidate.role === "dialog" || candidate.role === "alertdialog")
-      .map((candidate) => candidate.element);
+    const insideOverlay = (element: Element): boolean => isInsideRoots(element, overlayRoots);
+
+    const useful = candidates.filter((candidate) => {
+      if (candidate.name.length > 0) return true;
+      if (NAMELESS_KEEP_ROLES.has(candidate.role)) return true;
+      return insideOverlay(candidate.element);
+    });
+
+    // Prefer the open modal on any host. Keep portaled pickers that render
+    // outside it; many component libraries attach menus to document.body.
     const scoped =
-      dialogRoots.length === 0
-        ? candidates
-        : candidates.filter((candidate) =>
-            dialogRoots.some(
-              (root) => root === candidate.element || root.contains(candidate.element),
-            ),
+      overlayRoots.length === 0
+        ? useful
+        : useful.filter(
+            (candidate) =>
+              insideOverlay(candidate.element) || PORTALED_POPUP_ROLES.has(candidate.role),
           );
 
     scoped.sort((left, right) => {
