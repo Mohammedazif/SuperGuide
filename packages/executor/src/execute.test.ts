@@ -322,6 +322,32 @@ describe("the action executor", () => {
     expect(outcome.error.message).not.toMatch(/^no button named like Create appeared$/);
   });
 
+  it("waits for a dialog that appears after a click before returning the digest", async () => {
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    document.body.innerHTML = `${cards}<button id="new">New Project</button>`;
+    document.getElementById("new")?.addEventListener("click", () => {
+      window.setTimeout(() => {
+        const portal = document.createElement("div");
+        portal.innerHTML = `
+          <div role="dialog" aria-modal="true" aria-label="Create item">
+            <label for="item-name">Item name</label>
+            <input id="item-name">
+            <button>Next Step</button>
+          </div>`;
+        document.body.append(portal);
+      }, 200);
+    });
+
+    const executor = build();
+    const outcome = await executor.execute(
+      envelope({ type: "click", ref: refFor("New Project"), risk: "write" }),
+    );
+
+    expect(outcome.status).toBe("ok");
+    expect(outcome.digest?.elements.some((element) => element.name === "Item name")).toBe(true);
+    expect(outcome.digest?.elements.some((element) => element.name === "Next Step")).toBe(true);
+  });
+
   it("returns a fresh digest after a mutating action", async () => {
     const executor = build();
     const save = document.getElementById("save");

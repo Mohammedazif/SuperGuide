@@ -101,7 +101,10 @@ export const WIDGET_STYLES = `
 .history__preview { font-size: 12px; line-height: 1.35; }
 .history__when { font-size: 11px; color: var(--sg-muted); }
 
-.log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.log {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
 .empty {
   margin: auto; text-align: center; max-width: 260px; font-size: 12px; line-height: 1.5;
   color: var(--sg-muted);

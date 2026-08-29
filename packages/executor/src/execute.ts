@@ -77,6 +77,53 @@ function setValueObservably(element: HTMLInputElement | HTMLTextAreaElement, val
   element.dispatchEvent(new EventConstructor("change", { bubbles: true }));
 }
 
+const MODAL_FIELD_ROLES = new Set([
+  "textbox",
+  "searchbox",
+  "combobox",
+  "spinbutton",
+  "checkbox",
+  "radio",
+  "slider",
+  "switch",
+]);
+
+function hostHasOpenModal(document: Document): boolean {
+  const nodes = document.querySelectorAll(
+    '[role="dialog"], [role="alertdialog"], dialog, [aria-modal="true"]',
+  );
+  for (const node of nodes) {
+    if (node.tagName === "DIALOG" && !(node as HTMLDialogElement).open) continue;
+    const view = node.ownerDocument.defaultView;
+    if (view !== null) {
+      const style = view.getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden") continue;
+    }
+    if (node.getAttribute("aria-hidden") === "true") continue;
+    return true;
+  }
+  return false;
+}
+
+function digestHasModalFields(digest: PageDigest): boolean {
+  return digest.elements.some((element) => MODAL_FIELD_ROLES.has(element.role));
+}
+
+async function waitForOpenModalDigest(
+  observe: () => PageDigest,
+  document: Document,
+): Promise<void> {
+  const graceUntil = Date.now() + 400;
+  while (Date.now() < graceUntil && !hostHasOpenModal(document)) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!hostHasOpenModal(document)) return;
+  const until = Date.now() + 1_500;
+  while (Date.now() < until && !digestHasModalFields(observe())) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 function fillRouteTemplate(
   template: string,
   params: Record<string, string>,
@@ -148,6 +195,12 @@ export class ActionExecutor {
       const outcome = await this.#dispatch(action, url);
       if (outcome.status === "ok" && isMutating(action)) {
         await waitForSettle(this.#options.document, this.#options.settle ?? DEFAULT_SETTLE);
+        if (action.type === "click") {
+          await waitForOpenModalDigest(
+            () => this.digest(),
+            this.#options.document,
+          );
+        }
         return { ...outcome, digest: this.digest(), url: this.#options.navigator.currentUrl() };
       }
       return outcome;

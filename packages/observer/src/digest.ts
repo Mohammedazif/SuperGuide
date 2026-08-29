@@ -106,11 +106,15 @@ function isInsideClosedNativeDialog(element: Element): boolean {
 
 // Any host's modal: native <dialog open>, role=dialog|alertdialog, or aria-modal.
 function isOpenModalRoot(element: Element): boolean {
-  if (!isVisible(element) || isInsideClosedNativeDialog(element)) return false;
-  if (isNativeDialogOpen(element)) return true;
+  if (isInsideClosedNativeDialog(element)) return false;
   const role = roleOf(element);
-  if (role === "dialog" || role === "alertdialog") return true;
-  return element.getAttribute("aria-modal") === "true";
+  const dialogRole = role === "dialog" || role === "alertdialog";
+  const ariaModal = element.getAttribute("aria-modal") === "true";
+  const dataOpen = element.getAttribute("data-state") === "open";
+  if (!isNativeDialogOpen(element) && !dialogRole && !ariaModal) return false;
+  if (isVisible(element)) return true;
+  // Opening animations sometimes hide the node for a frame; data-state=open still means it is the overlay.
+  return dataOpen && (dialogRole || ariaModal);
 }
 
 function isInsideRoots(element: Element, roots: readonly Element[]): boolean {

@@ -98,8 +98,9 @@ describe("mounting the widget", () => {
     document.addEventListener("mousedown", count);
     document.addEventListener("click", count);
     document.addEventListener("focusin", count);
+    document.addEventListener("wheel", count);
 
-    for (const type of ["pointerdown", "mousedown", "click", "focusin"] as const) {
+    for (const type of ["pointerdown", "mousedown", "click", "focusin", "wheel"] as const) {
       host?.dispatchEvent(new Event(type, { bubbles: true, composed: true, cancelable: true }));
     }
 
@@ -107,6 +108,7 @@ describe("mounting the widget", () => {
     document.removeEventListener("mousedown", count);
     document.removeEventListener("click", count);
     document.removeEventListener("focusin", count);
+    document.removeEventListener("wheel", count);
 
     expect(leaked).toBe(0);
     widget.unmount();

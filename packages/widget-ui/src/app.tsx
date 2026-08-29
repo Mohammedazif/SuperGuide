@@ -103,7 +103,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
       </button>
 
       {open ? (
-        <section class="panel" role="dialog" aria-label={props.title}>
+        <section class="panel" role="region" aria-label={props.title}>
           <div class="panel__head">
             <div class="panel__titles">
               <h2 class="panel__title">{props.title}</h2>

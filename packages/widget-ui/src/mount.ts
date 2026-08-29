@@ -23,6 +23,8 @@ const PAGE_EVENTS = [
   "contextmenu",
   "focusin",
   "focusout",
+  "wheel",
+  "touchmove",
 ] as const;
 
 export interface MountOptions {

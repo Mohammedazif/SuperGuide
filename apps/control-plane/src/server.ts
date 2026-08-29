@@ -243,7 +243,7 @@ export function buildServer(deps: ServerDependencies): AppServer {
     app.get("/widget.js", (_request, reply) =>
       reply
         .type("text/javascript; charset=utf-8")
-        .header("cache-control", "public, max-age=300")
+        .header("cache-control", "public, max-age=0, must-revalidate")
         .send(widgetJs),
     );
   }
