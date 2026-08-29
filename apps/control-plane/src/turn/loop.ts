@@ -661,6 +661,8 @@ export async function runTurn(
       detail: expectOutcome.detail,
     });
 
+    observation = result.digest ?? observation;
+
     if (planned.toolUseId !== null) {
       const payload = redact(
         {
@@ -670,6 +672,24 @@ export async function runTurn(
         },
         { secretValues, allowedFieldNames },
       );
+      const parts = [
+        renderProvenanceEnvelope({
+          source: "api_response",
+          reference: tool.name,
+          content: JSON.stringify(payload),
+        }),
+      ];
+      // The extension re-shows the page after every action. Without this the planner
+      // keeps the opening digest (the crowded page) and cannot see an opened form.
+      if (result.digest !== null) {
+        parts.push(
+          renderProvenanceEnvelope({
+            source: "page_content",
+            reference: result.url ?? context.url,
+            content: renderDigest(result.digest),
+          }),
+        );
+      }
       const toolResultBlock: Anthropic.ToolResultBlockParam = {
         type: "tool_result",
         tool_use_id: planned.toolUseId,
@@ -677,11 +697,7 @@ export async function runTurn(
         content: [
           {
             type: "text",
-            text: renderProvenanceEnvelope({
-              source: "api_response",
-              reference: tool.name,
-              content: JSON.stringify(payload),
-            }),
+            text: parts.join("\n\n"),
           },
         ],
       };
@@ -692,12 +708,10 @@ export async function runTurn(
       previousStepFailed = true;
       signals.push(expectOutcome.detail);
       if (result.message !== null) signals.push(result.message);
-      observation = result.digest ?? observation;
       continue;
     }
 
     previousStepFailed = false;
-    observation = result.digest ?? observation;
   }
 
   const detail =
