@@ -122,6 +122,12 @@ export const WIDGET_STYLES = `
   border-bottom-left-radius: 4px;
 }
 .bubble--streaming { font-style: italic; color: var(--sg-muted); }
+.steps {
+  align-self: stretch; font-size: 12px; line-height: 1.45; color: var(--sg-muted);
+}
+.steps summary { cursor: pointer; user-select: none; }
+.steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--sg-text); }
+.steps__failed { color: var(--sg-error-text); }
 .thinking {
   align-self: flex-start; display: flex; align-items: center; gap: 5px;
   min-width: 44px; min-height: 18px;

@@ -162,9 +162,10 @@ function groundedTools(): CompiledTool[] {
       name: `ui_${type}`,
       description: schema.description,
       inputSchema: objectSchema(schema.properties, schema.required),
-      risk: type === "click" || type === "wait_for" || type === "scroll" || type === "hover"
-        ? ("read" as const)
-        : ("write" as const),
+      risk:
+        type === "wait_for" || type === "scroll" || type === "hover"
+          ? ("read" as const)
+          : ("write" as const),
       ladderLevel: "L4" as const,
       timeoutMs: DEFAULT_BROWSER_TIMEOUT_MS,
       expectTemplate: [{ kind: "capability_status" as const, status: "ok" as const }],

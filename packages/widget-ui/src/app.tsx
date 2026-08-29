@@ -195,6 +195,25 @@ export function Widget(props: WidgetProps): JSX.Element | null {
               </div>
             ))}
 
+            {state.steps.length > 0 ? (
+              <details class="steps">
+                <summary>
+                  {state.steps.every((step) => step.ok)
+                    ? `${String(state.steps.length)} completed`
+                    : state.steps.every((step) => !step.ok)
+                      ? `${String(state.steps.length)} failed`
+                      : `${String(state.steps.filter((step) => step.ok).length)} completed, ${String(state.steps.filter((step) => !step.ok).length)} failed`}
+                </summary>
+                <ul>
+                  {state.steps.map((step, index) => (
+                    <li key={`${String(index)}-${step.label}`} class={step.ok ? undefined : "steps__failed"}>
+                      {step.ok ? step.label : `${step.label} (failed)`}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+
             {thinking ? (
               <div class="bubble bubble--agent thinking" role="status" aria-label="Thinking">
                 <span />

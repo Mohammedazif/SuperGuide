@@ -145,11 +145,55 @@ describe("evaluatePolicy", () => {
     expect(
       evaluatePolicy(
         input({
-          action: apiAction("write"),
+          action: apiAction("write", { intent: "Update the display name.", tool: "api_updateDisplayName" }),
+          toolName: "api_updateDisplayName",
+          compiledToolNames: ["api_updateDisplayName"],
           productPolicy: { blockedRiskClasses: [], confirmEveryWrite: false },
         }),
       ),
     ).toEqual({ decision: "allow" });
+  });
+
+  it("still asks before a grounded click from an anonymous session", () => {
+    const verdict = evaluatePolicy(
+      input({
+        action: {
+          type: "click",
+          toolCallId: "toolu_1",
+          intent: "Open New Project.",
+          expect: [{ kind: "capability_status", status: "ok" }],
+          risk: "write",
+          timeoutMs: 20_000,
+          ref: "e1",
+        },
+        toolName: "ui_click",
+        compiledToolNames: ["ui_click"],
+        identity: { tier: "anonymous", scopes: [] },
+      }),
+    );
+    expect(verdict.decision).toBe("confirm");
+    if (verdict.decision === "confirm") expect(verdict.reason).toBe("write_requires_confirmation");
+  });
+
+  it("still asks before delete or buy even when every-write confirmation is off", () => {
+    const verdict = evaluatePolicy(
+      input({
+        action: {
+          type: "click",
+          toolCallId: "toolu_1",
+          intent: "Delete this project.",
+          expect: [{ kind: "capability_status", status: "ok" }],
+          risk: "write",
+          timeoutMs: 20_000,
+          ref: "e1",
+        },
+        toolName: "ui_click",
+        compiledToolNames: ["ui_click"],
+        productPolicy: { blockedRiskClasses: [], confirmEveryWrite: false },
+      }),
+    );
+    expect(verdict.decision).toBe("confirm");
+    if (verdict.decision === "confirm") expect(verdict.reason).toBe("write_requires_confirmation");
   });
 
   it("allows a read with every required scope held", () => {

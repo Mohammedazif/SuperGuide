@@ -5,6 +5,7 @@ import type {
   RiskClass,
 } from "@superguide/contract/public";
 import { firstMatchingRule } from "./matching.js";
+import { isSensitiveText } from "./sensitive.js";
 
 export interface ProcedurePolicy {
   never: readonly string[];
@@ -122,7 +123,10 @@ export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
   }
 
   if (input.identity.tier !== "verified" && input.action.risk !== "read") {
-    return { decision: "block", reason: "identity_insufficient" };
+    // Grounded UI writes can still run after an on-screen approval; API writes cannot.
+    if (!isGroundedMutating(input.action)) {
+      return { decision: "block", reason: "identity_insufficient" };
+    }
   }
 
   const held = new Set(input.identity.scopes);
@@ -142,6 +146,17 @@ export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
     }
   }
 
+  if (
+    input.action.risk !== "read" &&
+    (isSensitiveText(descriptor) || isSensitiveText(input.action.intent))
+  ) {
+    return {
+      decision: "confirm",
+      reason: "write_requires_confirmation",
+      preview: previewFor(input.action),
+    };
+  }
+
   if (input.action.risk !== "read" && input.productPolicy.confirmEveryWrite) {
     return {
       decision: "confirm",
@@ -153,7 +168,18 @@ export function evaluatePolicy(input: PolicyInput): PolicyVerdict {
   return { decision: "allow" };
 }
 
+function isGroundedMutating(action: AgentAction): boolean {
+  return (
+    action.type === "click" ||
+    action.type === "set_value" ||
+    action.type === "select_option" ||
+    action.type === "set_checked" ||
+    action.type === "press_key"
+  );
+}
+
 export { ruleMatches, tokenise, firstMatchingRule } from "./matching.js";
+export { SENSITIVE_TERMS, isSensitiveText } from "./sensitive.js";
 export {
   evaluateAnywherePolicy,
   describeActionForConfirmation,

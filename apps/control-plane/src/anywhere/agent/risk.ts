@@ -1,62 +1,7 @@
 import type { AgentAction, PageDigest, RiskClass } from "@superguide/contract/anywhere";
+import { isSensitiveText, SENSITIVE_TERMS } from "@superguide/policy";
 
-export const SENSITIVE_TERMS: readonly string[] = [
-  "2fa",
-  "archive",
-  "bank",
-  "billing",
-  "buy",
-  "cancel",
-  "card",
-  "charge",
-  "checkout",
-  "close",
-  "credential",
-  "deactivate",
-  "delete",
-  "destroy",
-  "downgrade",
-  "erase",
-  "grant",
-  "iban",
-  "impersonate",
-  "invoice",
-  "invite",
-  "merge",
-  "mfa",
-  "overwrite",
-  "owner",
-  "password",
-  "pay",
-  "payment",
-  "payout",
-  "permanently",
-  "permission",
-  "plan",
-  "production",
-  "purchase",
-  "purge",
-  "recovery",
-  "refund",
-  "remove",
-  "reset",
-  "revoke",
-  "role",
-  "sepa",
-  "ssn",
-  "subscribe",
-  "suspend",
-  "tax",
-  "terminate",
-  "totp",
-  "transfer",
-  "unsubscribe",
-  "upgrade",
-  "wipe",
-  "wire",
-];
-
-const SENSITIVE_NAME = new RegExp(`\\b(?:${SENSITIVE_TERMS.join("|")})\\b`, "i");
+export { SENSITIVE_TERMS };
 
 function targetName(id: string, digest: PageDigest | null): string | null {
   if (digest === null) return null;
@@ -78,7 +23,7 @@ export function classifyRisk(action: AgentAction, digest: PageDigest | null): Ri
     case "select":
     case "check": {
       const name = targetName(action.target.id, digest);
-      if (name !== null && SENSITIVE_NAME.test(name)) return "sensitive";
+      if (name !== null && isSensitiveText(name)) return "sensitive";
       return "write";
     }
     default: {

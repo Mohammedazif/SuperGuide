@@ -12,6 +12,7 @@ function stubClient(): SuperGuideClient {
     messages: [],
     conversations: [],
     streamingText: "",
+    steps: [],
     confirmation: null,
     escalation: null,
     notice: null,

@@ -20,6 +20,11 @@ export interface PendingConfirmation {
   expiresAt: string;
 }
 
+export interface TurnStep {
+  label: string;
+  ok: boolean;
+}
+
 export interface ClientState {
   status: "idle" | "opening" | "ready" | "unavailable";
   conversationId: string | null;
@@ -28,6 +33,7 @@ export interface ClientState {
   messages: DurableMessage[];
   conversations: ConversationSummary[];
   streamingText: string;
+  steps: TurnStep[];
   confirmation: PendingConfirmation | null;
   escalation: { reason: string; message: string; referenceUrl: string } | null;
   notice: string | null;
@@ -67,6 +73,7 @@ function emptyState(): ClientState {
     messages: [],
     conversations: [],
     streamingText: "",
+    steps: [],
     confirmation: null,
     escalation: null,
     notice: null,
@@ -82,6 +89,7 @@ export class SuperGuideClient {
   #state: ClientState = emptyState();
   #queuedMessage: string | null = null;
   #pendingUserIds = new Set<string>();
+  #pendingStepLabel: string | null = null;
 
   constructor(options: ClientOptions) {
     this.#options = options;
@@ -242,11 +250,14 @@ export class SuperGuideClient {
       content: { text: message },
       createdAt: new Date().toISOString(),
     };
+    this.#pendingStepLabel = null;
     this.#patch({
       running: true,
       streamingText: "",
       notice: null,
       escalation: null,
+      confirmation: null,
+      steps: [],
       messages: [...this.#state.messages, optimistic],
     });
 
@@ -297,12 +308,14 @@ export class SuperGuideClient {
     this.#stream.stop();
     this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
     this.#pendingUserIds.clear();
+    this.#pendingStepLabel = null;
     this.#patch({
       conversationId: null,
       turnId: null,
       running: false,
       messages: [],
       streamingText: "",
+      steps: [],
       confirmation: null,
       escalation: null,
       notice: null,
@@ -324,12 +337,14 @@ export class SuperGuideClient {
       return;
     }
     this.#stream.stop();
+    this.#pendingStepLabel = null;
     this.#options.storage.write(CONVERSATION_NAMESPACE, "current", conversationId);
     this.#patch({
       conversationId,
       turnId: null,
       messages: detail.value.messages,
       streamingText: "",
+      steps: [],
       confirmation: null,
       escalation: null,
       notice: null,
@@ -449,11 +464,20 @@ export class SuperGuideClient {
       case "action.executing": {
         const conversationId = this.#state.conversationId;
         if (conversationId === null) return;
+        this.#pendingStepLabel = event.action.intent;
         void this.#dispatcher.dispatch(conversationId, event.action);
         return;
       }
 
-      case "action.result":
+      case "action.result": {
+        const label = this.#pendingStepLabel ?? event.detail;
+        this.#pendingStepLabel = null;
+        this.#patch({
+          steps: [...this.#state.steps, { label, ok: event.satisfied }],
+        });
+        return;
+      }
+
       case "step.recorded":
         return;
 
