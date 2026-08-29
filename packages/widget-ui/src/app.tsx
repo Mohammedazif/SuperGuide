@@ -92,7 +92,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
     <div>
       <button
         type="button"
-        class="launcher"
+        class={state.running ? "launcher launcher--running" : "launcher"}
         aria-expanded={open}
         aria-label={open ? `Close ${props.title}` : `Open ${props.title}`}
         onClick={() => {
@@ -108,15 +108,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
             <div class="panel__titles">
               <h2 class="panel__title">{props.title}</h2>
               <div class={state.running ? "panel__status panel__status--running" : "panel__status"}>
-                {state.running ? (
-                  <span class="status-dots" aria-label="Thinking">
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                ) : (
-                  "Ready"
-                )}
+                {state.running ? "In progress" : "Ready"}
               </div>
             </div>
             <button
@@ -215,7 +207,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
             ) : null}
 
             {thinking ? (
-              <div class="bubble bubble--agent thinking" role="status" aria-label="Thinking">
+              <div class="bubble bubble--agent thinking" role="status" aria-label="In progress">
                 <span />
                 <span />
                 <span />

@@ -23,6 +23,7 @@ export interface ExecutorOptions {
   routeTemplates: ReadonlyMap<string, string>;
   groundedActionsEnabled: boolean;
   settle?: SettleOptions;
+  preview?: (element: Element) => Promise<void> | void;
 }
 
 function failure(
@@ -193,9 +194,11 @@ export class ActionExecutor {
 
     try {
       const outcome = await this.#dispatch(action, url);
-      if (outcome.status === "ok" && isMutating(action)) {
-        await waitForSettle(this.#options.document, this.#options.settle ?? DEFAULT_SETTLE);
-        if (action.type === "click") {
+      if (outcome.status === "ok" && (isMutating(action) || action.type === "wait_for")) {
+        if (isMutating(action)) {
+          await waitForSettle(this.#options.document, this.#options.settle ?? DEFAULT_SETTLE);
+        }
+        if (action.type === "click" || action.type === "wait_for") {
           await waitForOpenModalDigest(
             () => this.digest(),
             this.#options.document,
@@ -236,11 +239,22 @@ export class ActionExecutor {
     return { ok: true, element };
   }
 
+  async #preview(element: Element): Promise<void> {
+    const preview = this.#options.preview;
+    if (preview === undefined) return;
+    try {
+      await preview(element);
+    } catch {
+      // Highlighting must never block the action.
+    }
+  }
+
   async #dispatch(action: ExecutorAction, url: string): Promise<ExecutionOutcome> {
     switch (action.type) {
       case "click": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
+        await this.#preview(resolved.element);
         (resolved.element as HTMLElement).click();
         return { status: "ok", data: { clicked: action.ref }, digest: null, url };
       }
@@ -248,6 +262,7 @@ export class ActionExecutor {
       case "set_value": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
+        await this.#preview(resolved.element);
         const field = asInput(resolved.element) ?? asTextArea(resolved.element);
         if (field === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a text field`, this.digest(), url);
@@ -259,6 +274,7 @@ export class ActionExecutor {
       case "select_option": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
+        await this.#preview(resolved.element);
         const select = asSelect(resolved.element);
         if (select === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a select`, this.digest(), url);
@@ -285,6 +301,7 @@ export class ActionExecutor {
       case "set_checked": {
         const resolved = this.#resolve(action.ref, url);
         if (!resolved.ok) return resolved.outcome;
+        await this.#preview(resolved.element);
         const checkbox = asInput(resolved.element);
         if (checkbox === null) {
           return failure("ELEMENT_NOT_FOUND", `${action.ref} is not a checkbox`, this.digest(), url);

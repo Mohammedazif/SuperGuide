@@ -1,5 +1,6 @@
 import { h, render } from "preact";
 import type { SuperGuideClient } from "@superguide/client-core";
+import { createActLayer } from "./act.js";
 import { Widget } from "./app.js";
 import { WIDGET_STYLES } from "./styles.js";
 import { watchScheme } from "./theme.js";
@@ -37,6 +38,7 @@ export interface MountOptions {
 export interface MountedWidget {
   open(): void;
   close(): void;
+  highlight(element: Element): Promise<void>;
   unmount(): void;
 }
 
@@ -93,6 +95,9 @@ export function mountWidget(options: MountOptions): MountedWidget {
   shadow.append(container);
 
   const stopTheme = watchScheme(target, host);
+  const act = createActLayer(target, shadow, host, () => {
+    void options.client.cancel();
+  });
   let currentlyOpen = options.initiallyOpen ?? false;
 
   const draw = (open: boolean): void => {
@@ -112,6 +117,12 @@ export function mountWidget(options: MountOptions): MountedWidget {
 
   draw(currentlyOpen);
 
+  const stopWatch = options.client.subscribe((state) => {
+    act.setLocked(state.running);
+    act.paint(host.dataset.sgTheme === "dark" ? "dark" : "light");
+    if (state.running && !currentlyOpen) draw(true);
+  });
+
   return {
     open() {
       if (!currentlyOpen) draw(true);
@@ -119,7 +130,12 @@ export function mountWidget(options: MountOptions): MountedWidget {
     close() {
       if (currentlyOpen) draw(false);
     },
+    highlight(element: Element) {
+      return act.highlight(element);
+    },
     unmount() {
+      stopWatch();
+      act.remove();
       stopTheme();
       render(null, container);
       host.remove();

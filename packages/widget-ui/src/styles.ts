@@ -46,6 +46,7 @@ export const WIDGET_STYLES = `
   box-shadow: var(--sg-shadow);
 }
 .launcher:focus-visible { outline: 3px solid #8aa4e8; outline-offset: 2px; }
+.launcher--running { box-shadow: 0 0 0 3px #3f9d63, var(--sg-shadow); }
 
 .panel {
   position: fixed; inset-block-end: 72px; inset-inline-end: 16px;

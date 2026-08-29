@@ -61,6 +61,7 @@ function productBlock(input: CachedPrefixInput): string {
       "- Do not guess common submit labels such as Create, Save, Submit, or Confirm. Use the name that is actually listed.",
       "- A disabled Next, Continue, or Create control usually means a required field is still empty. Fill the named fields first.",
       "- Knowledge articles do not contain refs and cannot operate the page.",
+      "- After a click or wait_for, the tool result digest is the current page. If it lists a field or button you need, use that ref next. Do not escalate while those refs are present.",
     );
   }
 

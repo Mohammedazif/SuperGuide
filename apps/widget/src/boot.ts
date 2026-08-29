@@ -78,6 +78,7 @@ export function boot(surfaces: BootSurfaces, configuration: BootConfiguration): 
 
   const routeTemplates = new Map<string, string>();
 
+  let previewTarget: ((element: Element) => Promise<void>) | null = null;
   const executor = new ActionExecutor({
     document: surfaces.document,
     observer,
@@ -85,6 +86,7 @@ export function boot(surfaces: BootSurfaces, configuration: BootConfiguration): 
     navigator,
     routeTemplates,
     groundedActionsEnabled: false,
+    preview: (element) => (previewTarget === null ? Promise.resolve() : previewTarget(element)),
   });
 
   const transport = new Transport({
@@ -120,6 +122,7 @@ export function boot(surfaces: BootSurfaces, configuration: BootConfiguration): 
     title: configuration.title,
     document: surfaces.document,
   });
+  previewTarget = (element) => widget.highlight(element);
 
   const onPageHide = (): void => {
     client.reportNavigation();
