@@ -176,7 +176,14 @@ export class PageObserver {
           continue;
         }
         if (!isInteractiveRole(role) && !isObservableRole(role)) continue;
-        if (name.length === 0 && role !== "textbox") continue;
+        if (
+          name.length === 0 &&
+          role !== "textbox" &&
+          role !== "dialog" &&
+          role !== "alertdialog"
+        ) {
+          continue;
+        }
 
         candidates.push({
           element,
@@ -192,12 +199,24 @@ export class PageObserver {
 
     visit(document, 0);
 
-    candidates.sort((left, right) => {
+    const dialogRoots = candidates
+      .filter((candidate) => candidate.role === "dialog" || candidate.role === "alertdialog")
+      .map((candidate) => candidate.element);
+    const scoped =
+      dialogRoots.length === 0
+        ? candidates
+        : candidates.filter((candidate) =>
+            dialogRoots.some(
+              (root) => root === candidate.element || root.contains(candidate.element),
+            ),
+          );
+
+    scoped.sort((left, right) => {
       if (left.inViewport !== right.inViewport) return left.inViewport ? -1 : 1;
       return left.order - right.order;
     });
 
-    const kept = candidates.slice(0, maxElements);
+    const kept = scoped.slice(0, maxElements);
     const taken = new Set<string>();
     const elements: DigestElement[] = [];
 
@@ -227,7 +246,7 @@ export class PageObserver {
       headings,
       landmarks,
       elements,
-      truncated: candidates.length > kept.length,
+      truncated: scoped.length > kept.length,
     };
   }
 }

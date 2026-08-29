@@ -121,6 +121,25 @@ describe("the page digest", () => {
     expect(save?.state?.disabled).toBe(true);
   });
 
+  it("keeps an open dialog's controls instead of the crowded page behind it", () => {
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Project ${index}</button>`).join("");
+    render(`
+      <main>${cards}</main>
+      <div role="dialog" aria-label="Create New Project">
+        <label for="project-name">Project Name</label>
+        <input id="project-name">
+        <label for="total-plot-area">Total Plot Area</label>
+        <input id="total-plot-area" type="number">
+        <button>Next Step</button>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 10 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Project Name");
+    expect(names).toContain("Next Step");
+    expect(names.some((name) => /^Project \d+$/.test(name))).toBe(false);
+  });
+
   it("caps the element list and says so honestly", () => {
     const buttons = Array.from({ length: 30 }, (_, index) => `<button>Item ${index}</button>`).join("");
     render(buttons);
