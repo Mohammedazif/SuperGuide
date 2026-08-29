@@ -55,6 +55,25 @@ describe("a session that survives a navigation", () => {
       streamCalls += 1;
       return new Response(new ReadableStream(), { status: 200 });
     }
+    if (/\/v1\/conversations\/[0-9a-f-]{36}/i.test(path)) {
+      return new Response(
+        JSON.stringify({
+          conversation: {
+            id: CONVERSATION,
+            status: "open",
+            resolutionState: "in_progress",
+            createdAt: "2026-08-29T15:00:00.000Z",
+            closedAt: null,
+            lastMessagePreview: "",
+          },
+          messages: [],
+        }),
+        { status: 200 },
+      );
+    }
+    if (path.includes("/v1/conversations")) {
+      return new Response(JSON.stringify({ conversations: [] }), { status: 200 });
+    }
     if (path.includes("/v1/chat")) {
       return new Response(
         JSON.stringify({ turnId: "33333333-3333-4333-8333-333333333333", conversationId: CONVERSATION }),
@@ -129,10 +148,120 @@ describe("a session that survives a navigation", () => {
         expiresAt: null,
       }),
     );
+    store.setItem(
+      `sg.${CONVERSATION_NAMESPACE}.${PRODUCT}.current`,
+      JSON.stringify({ value: CONVERSATION, expiresAt: null }),
+    );
 
     const afterExpiry = build();
     await afterExpiry.start();
     expect(sessionCalls).toBe(2);
+    expect(afterExpiry.state.conversationId).toBeNull();
+    expect(store.getItem(`sg.${CONVERSATION_NAMESPACE}.${PRODUCT}.current`)).toBeNull();
+  });
+
+  it("starts a new conversation when the stored one is unknown", async () => {
+    const chatIds: Array<string | null> = [];
+    const transport = new Transport({
+      apiUrl: "https://api.trysuperguide.com",
+      productId: PRODUCT,
+      fetchImplementation: ((target: string | URL, init?: RequestInit) => {
+        const path = String(target);
+        if (path.includes("/v1/session")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                sessionToken: "token-1",
+                expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+                tier: "anonymous",
+                scopes: [],
+              }),
+              { status: 200 },
+            ),
+          );
+        }
+        if (path.includes("/v1/products/")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                productId: PRODUCT,
+                name: "fixture",
+                groundedActionsEnabled: false,
+                stepBudget: 12,
+                routes: [],
+                redactionAllowlist: [],
+              }),
+              { status: 200 },
+            ),
+          );
+        }
+        if (/\/v1\/conversations\/[0-9a-f-]{36}/i.test(path)) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ error: { code: "conversation_unknown", message: "gone" } }), {
+              status: 404,
+            }),
+          );
+        }
+        if (path.includes("/v1/conversations")) {
+          return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200 }));
+        }
+        if (path.includes("/v1/chat")) {
+          const raw = init?.body;
+          const body = JSON.parse(typeof raw === "string" ? raw : "{}") as {
+            conversationId: string | null;
+          };
+          chatIds.push(body.conversationId);
+          if (body.conversationId === CONVERSATION) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({ error: { code: "conversation_unknown", message: "gone" } }),
+                { status: 404 },
+              ),
+            );
+          }
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                turnId: "33333333-3333-4333-8333-333333333333",
+                conversationId: CONVERSATION,
+              }),
+              { status: 202 },
+            ),
+          );
+        }
+        if (path.includes("/v1/stream")) {
+          return Promise.resolve(new Response(new ReadableStream(), { status: 200 }));
+        }
+        return Promise.resolve(new Response("{}", { status: 200 }));
+      }) as unknown as typeof fetch,
+    });
+
+    const client = new SuperGuideClient({
+      transport,
+      executor: { execute: vi.fn() } as unknown as ActionExecutor,
+      storage: new NamespacedStorage(store, PRODUCT),
+      capabilities: new ClientCapabilityRegistry(),
+      currentDigest: () => DIGEST,
+      currentUrl: () => url,
+    });
+    await client.start();
+    await client.send("first");
+    expect(client.state.conversationId).toBe(CONVERSATION);
+    await client.send("second");
+    expect(chatIds).toEqual([null, CONVERSATION, null]);
+    expect(client.state.conversationId).toBe(CONVERSATION);
+    expect(client.state.notice).toBeNull();
+  });
+
+  it("starts a blank chat on newChat without dropping the session", async () => {
+    const client = build();
+    await client.start();
+    await client.send("create a project");
+    expect(client.state.conversationId).toBe(CONVERSATION);
+    client.newChat();
+    expect(client.state.conversationId).toBeNull();
+    expect(client.state.messages).toEqual([]);
+    expect(store.getItem(`sg.${SESSION_NAMESPACE}.${PRODUCT}.current`)).not.toBeNull();
   });
 
   it("holds a message asked for before the session is open rather than dropping it", async () => {

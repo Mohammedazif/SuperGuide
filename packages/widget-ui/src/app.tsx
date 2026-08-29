@@ -50,6 +50,7 @@ function Confirmation(props: {
 export function Widget(props: WidgetProps): JSX.Element | null {
   const [state, setState] = useState<ClientState>(props.client.state);
   const [draft, setDraft] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const open = props.open;
@@ -107,6 +108,30 @@ export function Widget(props: WidgetProps): JSX.Element | null {
             </div>
             <button
               type="button"
+              class="panel__action"
+              onClick={() => {
+                setHistoryOpen(false);
+                setDraft("");
+                props.client.newChat();
+                composerRef.current?.focus();
+              }}
+            >
+              New
+            </button>
+            <button
+              type="button"
+              class="panel__action"
+              aria-pressed={historyOpen}
+              onClick={() => {
+                const next = !historyOpen;
+                setHistoryOpen(next);
+                if (next) void props.client.refreshHistory();
+              }}
+            >
+              Chats
+            </button>
+            <button
+              type="button"
               class="panel__close"
               aria-label="Close"
               onClick={() => {
@@ -116,6 +141,32 @@ export function Widget(props: WidgetProps): JSX.Element | null {
               {"×"}
             </button>
           </div>
+
+          {historyOpen ? (
+            <div class="history" role="list">
+              {state.conversations.length === 0 ? (
+                <div class="empty">No earlier chats in this session.</div>
+              ) : (
+                state.conversations.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    class={entry.id === state.conversationId ? "history__item history__item--current" : "history__item"}
+                    disabled={state.running}
+                    onClick={() => {
+                      setHistoryOpen(false);
+                      void props.client.openConversation(entry.id);
+                    }}
+                  >
+                    <span class="history__preview">
+                      {entry.lastMessagePreview.length > 0 ? entry.lastMessagePreview : "Empty chat"}
+                    </span>
+                    <span class="history__when">{entry.createdAt.slice(0, 10)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
 
           <div class="log" ref={logRef} role="log" aria-live="polite" aria-atomic="false">
             {idle ? (

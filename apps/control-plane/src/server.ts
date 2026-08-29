@@ -586,6 +586,42 @@ export function buildServer(deps: ServerDependencies): AppServer {
     return reply.status(200).send({ conversations });
   });
 
+  app.get<{ Params: { conversationId: string } }>(
+    "/v1/conversations/:conversationId",
+    async (request, reply) => {
+      const product = request.sgProduct;
+      if (product === undefined) throw new ApiFailure("product_unknown");
+      const claims = requireSession(request);
+      const conversationId = request.params.conversationId;
+
+      const detail = await withProduct(deps.db, product.id, async (tx) => {
+        const row = await findConversation(tx, conversationId);
+        if (row === null || row.endUserId !== claims.endUserId || row.productId !== product.id) {
+          return null;
+        }
+        const journal = await readJournalSince(tx, row.id, 0, 500);
+        const messages = journal
+          .filter((entry) => entry.kind === "message")
+          .map((entry) => entry.message);
+        const latest = messages.at(-1);
+        return {
+          conversation: {
+            id: row.id,
+            status: row.status,
+            resolutionState: row.resolutionState,
+            createdAt: row.createdAt.toISOString(),
+            closedAt: row.closedAt === null ? null : row.closedAt.toISOString(),
+            lastMessagePreview: latest === undefined ? "" : latest.content.text.slice(0, 160),
+          },
+          messages,
+        };
+      });
+
+      if (detail === null) throw new ApiFailure("conversation_unknown");
+      return reply.status(200).send(detail);
+    },
+  );
+
   app.addHook("onRequest", (request, _reply, done) => {
     if (!request.url.startsWith("/internal")) {
       done();

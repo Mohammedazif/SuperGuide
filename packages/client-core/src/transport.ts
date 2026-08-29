@@ -1,12 +1,16 @@
 import {
   apiErrorSchema,
   chatAcceptedSchema,
+  conversationDetailSchema,
+  conversationListSchema,
   productConfigSchema,
   sessionResponseSchema,
   toolResultAcceptedSchema,
   type ChatAccepted,
   type ChatRequest,
   type ConfirmRequest,
+  type ConversationDetail,
+  type ConversationList,
   type PageDigest,
   type ProductConfig,
   type SessionResponse,
@@ -72,10 +76,11 @@ export class Transport {
   ): Promise<TransportResult<T>> {
     let response: Response;
     try {
+      const method = options.method ?? "POST";
       response = await this.fetch(this.url(path), {
-        method: options.method ?? "POST",
+        method,
         headers: this.headers(),
-        body: body === undefined ? null : JSON.stringify(body),
+        ...(method === "GET" || body === undefined ? {} : { body: JSON.stringify(body) }),
         ...(options.keepalive === true ? { keepalive: true } : {}),
       });
     } catch (error) {
@@ -141,6 +146,24 @@ export class Transport {
 
   chat(request: ChatRequest): Promise<TransportResult<ChatAccepted>> {
     return this.#send("/v1/chat", request, (value) => chatAcceptedSchema.parse(value));
+  }
+
+  listConversations(): Promise<TransportResult<ConversationList>> {
+    return this.#send(
+      "/v1/conversations",
+      undefined,
+      (value) => conversationListSchema.parse(value),
+      { method: "GET" },
+    );
+  }
+
+  getConversation(conversationId: string): Promise<TransportResult<ConversationDetail>> {
+    return this.#send(
+      `/v1/conversations/${conversationId}`,
+      undefined,
+      (value) => conversationDetailSchema.parse(value),
+      { method: "GET" },
+    );
   }
 
   toolResult(

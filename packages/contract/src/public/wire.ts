@@ -122,6 +122,12 @@ export const durableMessageSchema = z.object({
 });
 export type DurableMessage = z.infer<typeof durableMessageSchema>;
 
+export const conversationDetailSchema = z.object({
+  conversation: conversationSummarySchema,
+  messages: z.array(durableMessageSchema),
+});
+export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
+
 export const durableStepSchema = z.object({
   id: uuidSchema,
   seq: seqSchema,

@@ -1,5 +1,6 @@
 import type {
   ConfirmationDecision,
+  ConversationSummary,
   DurableMessage,
   PageDigest,
   ProductConfig,
@@ -25,6 +26,7 @@ export interface ClientState {
   turnId: string | null;
   running: boolean;
   messages: DurableMessage[];
+  conversations: ConversationSummary[];
   streamingText: string;
   confirmation: PendingConfirmation | null;
   escalation: { reason: string; message: string; referenceUrl: string } | null;
@@ -63,6 +65,7 @@ function emptyState(): ClientState {
     turnId: null,
     running: false,
     messages: [],
+    conversations: [],
     streamingText: "",
     confirmation: null,
     escalation: null,
@@ -95,9 +98,9 @@ export class SuperGuideClient {
         this.#handleEvent(event);
       },
       onGone: () => {
+        this.#forgetConversation();
         this.#patch({
           running: false,
-          turnId: null,
           notice: "That request is no longer running. You can ask again.",
         });
       },
@@ -131,10 +134,17 @@ export class SuperGuideClient {
     return true;
   }
 
+  #forgetConversation(): void {
+    this.#stream.stop();
+    this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
+    this.#patch({ conversationId: null, turnId: null });
+  }
+
   async start(): Promise<void> {
     this.#patch({ status: "opening" });
 
-    if (!this.#restoreSession()) {
+    const restored = this.#restoreSession();
+    if (!restored) {
       const session = await this.#options.transport.openSession();
       if (!session.ok) {
         // The widget fails closed: a control plane outage leaves the host page untouched.
@@ -154,12 +164,8 @@ export class SuperGuideClient {
         },
         Math.max(0, Date.parse(session.value.expiresAt) - Date.now()),
       );
-    }
-
-    const carried = this.#options.storage.read<string>(CONVERSATION_NAMESPACE, "current");
-    if (carried !== null) {
-      this.#patch({ conversationId: carried });
-      this.#stream.connect(carried);
+      // A new anonymous user cannot resume another user's conversation id.
+      this.#forgetConversation();
     }
 
     const config = await this.#options.transport.config();
@@ -167,6 +173,10 @@ export class SuperGuideClient {
       status: "ready",
       config: config.ok ? config.value : null,
     });
+    await this.refreshHistory();
+
+    const carried = this.#options.storage.read<string>(CONVERSATION_NAMESPACE, "current");
+    if (carried !== null) await this.openConversation(carried);
 
     const descriptors = this.#options.capabilities.descriptors();
     if (descriptors.length > 0) {
@@ -224,12 +234,20 @@ export class SuperGuideClient {
 
     this.#patch({ running: true, streamingText: "", notice: null, escalation: null });
 
-    const accepted = await this.#options.transport.chat({
-      conversationId: this.#state.conversationId,
+    const payload = {
       message,
       digest: this.#options.currentDigest(),
       url: this.#options.currentUrl(),
+    };
+    let accepted = await this.#options.transport.chat({
+      conversationId: this.#state.conversationId,
+      ...payload,
     });
+
+    if (!accepted.ok && accepted.code === "conversation_unknown") {
+      this.#forgetConversation();
+      accepted = await this.#options.transport.chat({ conversationId: null, ...payload });
+    }
 
     if (!accepted.ok) {
       this.#patch({
@@ -246,6 +264,59 @@ export class SuperGuideClient {
     this.#options.storage.write(CONVERSATION_NAMESPACE, "current", accepted.value.conversationId);
     this.#patch({ conversationId: accepted.value.conversationId, turnId: accepted.value.turnId });
     if (first) this.#stream.connect(accepted.value.conversationId);
+    void this.refreshHistory();
+  }
+
+  async refreshHistory(): Promise<void> {
+    const listed = await this.#options.transport.listConversations();
+    if (listed.ok) this.#patch({ conversations: listed.value.conversations });
+  }
+
+  newChat(): void {
+    if (this.#state.turnId !== null) {
+      void this.#options.transport.cancel(this.#state.turnId);
+    }
+    this.#stream.stop();
+    this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
+    this.#patch({
+      conversationId: null,
+      turnId: null,
+      running: false,
+      messages: [],
+      streamingText: "",
+      confirmation: null,
+      escalation: null,
+      notice: null,
+    });
+  }
+
+  async openConversation(conversationId: string): Promise<void> {
+    if (this.#state.running) return;
+    const detail = await this.#options.transport.getConversation(conversationId);
+    if (!detail.ok) {
+      if (detail.code === "conversation_unknown") {
+        this.#forgetConversation();
+        await this.refreshHistory();
+        return;
+      }
+      this.#options.storage.write(CONVERSATION_NAMESPACE, "current", conversationId);
+      this.#patch({ conversationId, messages: [], notice: null });
+      this.#stream.connect(conversationId);
+      return;
+    }
+    this.#stream.stop();
+    this.#options.storage.write(CONVERSATION_NAMESPACE, "current", conversationId);
+    this.#patch({
+      conversationId,
+      turnId: null,
+      messages: detail.value.messages,
+      streamingText: "",
+      confirmation: null,
+      escalation: null,
+      notice: null,
+      running: false,
+    });
+    this.#stream.connect(conversationId);
   }
 
   async decideConfirmation(decision: ConfirmationDecision): Promise<void> {
@@ -287,7 +358,12 @@ export class SuperGuideClient {
   reset(): void {
     this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
     this.#stream.stop();
-    this.#state = { ...emptyState(), status: this.#state.status, config: this.#state.config };
+    this.#state = {
+      ...emptyState(),
+      status: this.#state.status,
+      config: this.#state.config,
+      conversations: this.#state.conversations,
+    };
     for (const listener of [...this.#listeners]) listener(this.#state);
   }
 

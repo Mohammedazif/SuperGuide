@@ -10,6 +10,7 @@ function stubClient(): SuperGuideClient {
     turnId: null,
     running: false,
     messages: [],
+    conversations: [],
     streamingText: "",
     confirmation: null,
     escalation: null,
@@ -33,6 +34,9 @@ function stubClient(): SuperGuideClient {
     stop: vi.fn(),
     reset: vi.fn(),
     start: vi.fn(),
+    newChat: vi.fn(),
+    openConversation: vi.fn(),
+    refreshHistory: vi.fn(),
   } as unknown as SuperGuideClient;
 }
 
