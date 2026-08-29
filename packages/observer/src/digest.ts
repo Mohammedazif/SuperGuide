@@ -81,8 +81,11 @@ function composedAncestors(element: Element): Element[] {
   return ancestors;
 }
 
-function isInertOrAriaHidden(element: Element): boolean {
+function isInertOrAriaHidden(element: Element, overlayRoots: readonly Element[]): boolean {
+  const overlays = new Set(overlayRoots);
   for (const ancestor of composedAncestors(element)) {
+    // Modal contents stay operable even when the page root behind them is aria-hidden/inert.
+    if (overlays.has(ancestor)) return false;
     if (ancestor.hasAttribute("inert")) return true;
     if (ancestor.getAttribute("aria-hidden") === "true") return true;
   }
@@ -256,7 +259,7 @@ export class PageObserver {
         if (role === null) continue;
         if (
           !isVisible(element) ||
-          isInertOrAriaHidden(element) ||
+          isInertOrAriaHidden(element, overlayRoots) ||
           isInsideClosedNativeDialog(element)
         ) {
           continue;

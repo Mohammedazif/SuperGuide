@@ -5,7 +5,25 @@ import { WIDGET_STYLES } from "./styles.js";
 import { watchScheme } from "./theme.js";
 
 export const SHADOW_HOST_ID = "superguide-root";
-const PAGE_KEYS = ["keydown", "keypress", "keyup", "paste", "beforeinput", "compositionstart"] as const;
+const PAGE_EVENTS = [
+  "keydown",
+  "keypress",
+  "keyup",
+  "paste",
+  "beforeinput",
+  "compositionstart",
+  "pointerdown",
+  "pointerup",
+  "mousedown",
+  "mouseup",
+  "click",
+  "dblclick",
+  "touchstart",
+  "touchend",
+  "contextmenu",
+  "focusin",
+  "focusout",
+] as const;
 
 export interface MountOptions {
   client: SuperGuideClient;
@@ -20,13 +38,13 @@ export interface MountedWidget {
   unmount(): void;
 }
 
-function stopPageShortcuts(event: Event): void {
+function stopPagePropagation(event: Event): void {
   event.stopPropagation();
 }
 
-function retainKeys(node: EventTarget): void {
-  for (const name of PAGE_KEYS) {
-    node.addEventListener(name, stopPageShortcuts);
+function isolateFromPage(node: EventTarget): void {
+  for (const name of PAGE_EVENTS) {
+    node.addEventListener(name, stopPagePropagation);
   }
 }
 
@@ -49,8 +67,8 @@ export function mountWidget(options: MountOptions): MountedWidget {
   target.body.append(host);
 
   const shadow = host.attachShadow({ mode: "closed" });
-  retainKeys(shadow);
-  retainKeys(host);
+  isolateFromPage(shadow);
+  isolateFromPage(host);
   host.addEventListener("beforeinput", (event) => {
     const origin = typeof event.composedPath === "function" ? event.composedPath()[0] : event.target;
     if (origin === host) event.preventDefault();
@@ -69,6 +87,7 @@ export function mountWidget(options: MountOptions): MountedWidget {
 
   const container = target.createElement("div");
   container.style.pointerEvents = "auto";
+  isolateFromPage(container);
   shadow.append(container);
 
   const stopTheme = watchScheme(target, host);

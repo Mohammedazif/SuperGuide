@@ -84,6 +84,34 @@ describe("mounting the widget", () => {
     second.unmount();
   });
 
+  it("does not leak pointer or focus events that would dismiss a host modal", () => {
+    document.body.innerHTML = "";
+    const widget = mountWidget({ client: stubClient(), document, initiallyOpen: true });
+    const host = document.getElementById(SHADOW_HOST_ID);
+    expect(host).not.toBeNull();
+
+    let leaked = 0;
+    const count = (): void => {
+      leaked += 1;
+    };
+    document.addEventListener("pointerdown", count);
+    document.addEventListener("mousedown", count);
+    document.addEventListener("click", count);
+    document.addEventListener("focusin", count);
+
+    for (const type of ["pointerdown", "mousedown", "click", "focusin"] as const) {
+      host?.dispatchEvent(new Event(type, { bubbles: true, composed: true, cancelable: true }));
+    }
+
+    document.removeEventListener("pointerdown", count);
+    document.removeEventListener("mousedown", count);
+    document.removeEventListener("click", count);
+    document.removeEventListener("focusin", count);
+
+    expect(leaked).toBe(0);
+    widget.unmount();
+  });
+
   it("does not leak composer keystrokes to the page", () => {
     document.documentElement.className = "dark";
     const widget = mountWidget({ client: stubClient(), document, initiallyOpen: true });

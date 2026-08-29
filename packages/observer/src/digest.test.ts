@@ -237,6 +237,45 @@ describe("the page digest", () => {
     expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
   });
 
+  it("keeps a portaled dialog's fields when the page behind it is aria-hidden", () => {
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    render(`
+      <div id="app" aria-hidden="true">${cards}<button>New Project</button></div>
+      <div data-radix-portal>
+        <div role="dialog" aria-modal="true" aria-label="Create item">
+          <label for="item-name">Item name</label>
+          <input id="item-name">
+          <button>Next Step</button>
+        </div>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 10 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Item name");
+    expect(names).toContain("Next Step");
+    expect(names).not.toContain("New Project");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
+  it("still sees form fields when the dialog itself sits under an aria-hidden ancestor", () => {
+    const cards = Array.from({ length: 40 }, (_, index) => `<button>Row ${index}</button>`).join("");
+    render(`
+      <div id="app" aria-hidden="true">
+        ${cards}
+        <div role="dialog" aria-label="Edit profile">
+          <label for="display-name">Display name</label>
+          <input id="display-name">
+          <button>Save</button>
+        </div>
+      </div>
+    `);
+    const digest = observer.observe(document, { maxElements: 10 });
+    const names = digest.elements.map((element) => element.name);
+    expect(names).toContain("Display name");
+    expect(names).toContain("Save");
+    expect(names.some((name) => /^Row \d+$/.test(name))).toBe(false);
+  });
+
   it("still reports unnamed comboboxes on a page with no modal", () => {
     render(`
       <label for="named">Country</label>
