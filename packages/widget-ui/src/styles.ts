@@ -61,8 +61,20 @@ export const WIDGET_STYLES = `
 }
 .panel__titles { flex: 1; min-width: 0; }
 .panel__title { font-size: 13px; font-weight: 650; margin: 0; line-height: 1.2; }
-.panel__status { font-size: 12px; color: var(--sg-muted); margin-top: 2px; }
+.panel__status { font-size: 12px; color: var(--sg-muted); margin-top: 2px; min-height: 16px; }
 .panel__status--running { color: #3f9d63; }
+.status-dots, .thinking { display: inline-flex; align-items: center; gap: 4px; }
+.status-dots span, .thinking span {
+  width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+  animation: sg-dot 1.1s infinite ease-in-out;
+}
+.thinking span { background: var(--sg-muted); width: 6px; height: 6px; }
+.status-dots span:nth-child(2), .thinking span:nth-child(2) { animation-delay: 0.15s; }
+.status-dots span:nth-child(3), .thinking span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes sg-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
 .panel__action {
   border: 1px solid var(--sg-border); background: transparent; color: var(--sg-text);
   height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 650;
@@ -107,6 +119,10 @@ export const WIDGET_STYLES = `
   border-bottom-left-radius: 4px;
 }
 .bubble--streaming { font-style: italic; color: var(--sg-muted); }
+.thinking {
+  align-self: flex-start; display: flex; align-items: center; gap: 5px;
+  min-width: 44px; min-height: 18px;
+}
 
 .notice, .escalation {
   align-self: stretch; font-size: 12px; padding: 9px 11px; border-radius: 10px;

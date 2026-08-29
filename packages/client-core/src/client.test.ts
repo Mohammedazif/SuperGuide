@@ -264,6 +264,17 @@ describe("a session that survives a navigation", () => {
     expect(store.getItem(`sg.${SESSION_NAMESPACE}.${PRODUCT}.current`)).not.toBeNull();
   });
 
+  it("shows the user's message before the server accepts the turn", async () => {
+    const client = build();
+    await client.start();
+    const pending = client.send("create a new Indian project");
+    expect(client.state.messages.map((entry) => entry.content.text)).toEqual([
+      "create a new Indian project",
+    ]);
+    expect(client.state.running).toBe(true);
+    await pending;
+  });
+
   it("holds a message asked for before the session is open rather than dropping it", async () => {
     const client = build();
     const sending = client.send("what plan are we on?");

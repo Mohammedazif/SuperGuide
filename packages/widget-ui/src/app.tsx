@@ -61,7 +61,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
   useEffect(() => {
     const log = logRef.current;
     if (log !== null) log.scrollTop = log.scrollHeight;
-  }, [state.messages.length, state.streamingText, state.escalation, state.notice]);
+  }, [state.messages.length, state.streamingText, state.escalation, state.notice, state.running]);
 
   useEffect(() => {
     if (open) composerRef.current?.focus();
@@ -76,7 +76,12 @@ export function Widget(props: WidgetProps): JSX.Element | null {
     void props.client.send(text);
   };
 
+  const thinking =
+    state.running &&
+    state.streamingText.length === 0 &&
+    state.confirmation === null;
   const idle =
+    !thinking &&
     state.messages.length === 0 &&
     state.streamingText.length === 0 &&
     state.confirmation === null &&
@@ -103,7 +108,15 @@ export function Widget(props: WidgetProps): JSX.Element | null {
             <div class="panel__titles">
               <h2 class="panel__title">{props.title}</h2>
               <div class={state.running ? "panel__status panel__status--running" : "panel__status"}>
-                {state.running ? "Working" : "Ready"}
+                {state.running ? (
+                  <span class="status-dots" aria-label="Thinking">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                ) : (
+                  "Ready"
+                )}
               </div>
             </div>
             <button
@@ -181,6 +194,14 @@ export function Widget(props: WidgetProps): JSX.Element | null {
                 {message.content.text}
               </div>
             ))}
+
+            {thinking ? (
+              <div class="bubble bubble--agent thinking" role="status" aria-label="Thinking">
+                <span />
+                <span />
+                <span />
+              </div>
+            ) : null}
 
             {state.streamingText.length > 0 ? (
               <div class="bubble bubble--agent bubble--streaming">{state.streamingText}</div>

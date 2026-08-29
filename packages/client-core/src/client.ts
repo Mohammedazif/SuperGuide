@@ -81,6 +81,7 @@ export class SuperGuideClient {
   readonly #listeners = new Set<StateListener>();
   #state: ClientState = emptyState();
   #queuedMessage: string | null = null;
+  #pendingUserIds = new Set<string>();
 
   constructor(options: ClientOptions) {
     this.#options = options;
@@ -232,7 +233,22 @@ export class SuperGuideClient {
     }
     if (this.#state.status !== "ready") return;
 
-    this.#patch({ running: true, streamingText: "", notice: null, escalation: null });
+    const optimisticId = crypto.randomUUID();
+    this.#pendingUserIds.add(optimisticId);
+    const optimistic = {
+      id: optimisticId,
+      seq: (this.#state.messages.at(-1)?.seq ?? 0) + 1,
+      role: "user" as const,
+      content: { text: message },
+      createdAt: new Date().toISOString(),
+    };
+    this.#patch({
+      running: true,
+      streamingText: "",
+      notice: null,
+      escalation: null,
+      messages: [...this.#state.messages, optimistic],
+    });
 
     const payload = {
       message,
@@ -250,8 +266,10 @@ export class SuperGuideClient {
     }
 
     if (!accepted.ok) {
+      this.#pendingUserIds.delete(optimisticId);
       this.#patch({
         running: false,
+        messages: this.#state.messages.filter((entry) => entry.id !== optimisticId),
         notice:
           accepted.code === "rate_limited"
             ? "That was a lot of requests at once. Give it a moment and try again."
@@ -278,6 +296,7 @@ export class SuperGuideClient {
     }
     this.#stream.stop();
     this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
+    this.#pendingUserIds.clear();
     this.#patch({
       conversationId: null,
       turnId: null,
@@ -356,6 +375,7 @@ export class SuperGuideClient {
   }
 
   reset(): void {
+    this.#pendingUserIds.clear();
     this.#options.storage.remove(CONVERSATION_NAMESPACE, "current");
     this.#stream.stop();
     this.#state = {
@@ -381,10 +401,28 @@ export class SuperGuideClient {
       case "message.completed": {
         const seen = this.#state.messages.some((message) => message.id === event.message.id);
         if (seen) return;
-        this.#patch({
-          messages: [...this.#state.messages, event.message].sort((left, right) => left.seq - right.seq),
-          streamingText: "",
-        });
+        const pendingMatch = this.#state.messages.find(
+          (entry) =>
+            this.#pendingUserIds.has(entry.id) &&
+            entry.role === event.message.role &&
+            entry.content.text === event.message.content.text,
+        );
+        if (pendingMatch !== undefined) {
+          this.#pendingUserIds.delete(pendingMatch.id);
+          this.#patch({
+            messages: this.#state.messages
+              .map((entry) => (entry.id === pendingMatch.id ? event.message : entry))
+              .sort((left, right) => left.seq - right.seq),
+            streamingText: "",
+          });
+        } else {
+          this.#patch({
+            messages: [...this.#state.messages, event.message].sort(
+              (left, right) => left.seq - right.seq,
+            ),
+            streamingText: "",
+          });
+        }
         this.#options.onNotify?.("message", {
           role: event.message.role,
           seq: event.message.seq,
