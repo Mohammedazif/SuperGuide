@@ -31,7 +31,7 @@ function Confirmation(props: {
             props.onDecide("approved");
           }}
         >
-          Yes, do it
+          Approve
         </button>
         <button
           type="button"
@@ -40,7 +40,7 @@ function Confirmation(props: {
             props.onDecide("denied");
           }}
         >
-          No, stop
+          Decline
         </button>
       </div>
     </div>
@@ -51,6 +51,7 @@ export function Widget(props: WidgetProps): JSX.Element | null {
   const [state, setState] = useState<ClientState>(props.client.state);
   const [draft, setDraft] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const open = props.open;
   const setOpen = props.onOpenChange;
 
@@ -59,7 +60,11 @@ export function Widget(props: WidgetProps): JSX.Element | null {
   useEffect(() => {
     const log = logRef.current;
     if (log !== null) log.scrollTop = log.scrollHeight;
-  }, [state.messages.length, state.streamingText]);
+  }, [state.messages.length, state.streamingText, state.escalation, state.notice]);
+
+  useEffect(() => {
+    if (open) composerRef.current?.focus();
+  }, [open]);
 
   if (state.status === "unavailable") return null;
 
@@ -69,6 +74,13 @@ export function Widget(props: WidgetProps): JSX.Element | null {
     setDraft("");
     void props.client.send(text);
   };
+
+  const idle =
+    state.messages.length === 0 &&
+    state.streamingText.length === 0 &&
+    state.confirmation === null &&
+    state.escalation === null &&
+    state.notice === null;
 
   return (
     <div>
@@ -81,13 +93,18 @@ export function Widget(props: WidgetProps): JSX.Element | null {
           setOpen(!open);
         }}
       >
-        {open ? "×" : "?"}
+        {open ? "×" : "SG"}
       </button>
 
       {open ? (
         <section class="panel" role="dialog" aria-label={props.title}>
           <div class="panel__head">
-            <h2 class="panel__title">{props.title}</h2>
+            <div class="panel__titles">
+              <h2 class="panel__title">{props.title}</h2>
+              <div class={state.running ? "panel__status panel__status--running" : "panel__status"}>
+                {state.running ? "Working" : "Ready"}
+              </div>
+            </div>
             <button
               type="button"
               class="panel__close"
@@ -101,6 +118,10 @@ export function Widget(props: WidgetProps): JSX.Element | null {
           </div>
 
           <div class="log" ref={logRef} role="log" aria-live="polite" aria-atomic="false">
+            {idle ? (
+              <div class="empty">Describe the task. SuperGuide will work through it on this page.</div>
+            ) : null}
+
             {state.messages.map((message) => (
               <div
                 key={message.id}
@@ -136,28 +157,28 @@ export function Widget(props: WidgetProps): JSX.Element | null {
             ) : null}
           </div>
 
-          {state.running ? (
-            <p class="working" role="status">
-              Working on it.
-            </p>
-          ) : null}
-
           <div class="composer">
             <label class="visually-hidden" for="sg-composer">
-              What do you need?
+              What are you stuck on?
             </label>
             <textarea
               id="sg-composer"
+              ref={composerRef}
               value={draft}
-              placeholder="What do you need?"
+              rows={1}
+              placeholder="What are you stuck on?"
               onInput={(event) => {
                 setDraft(event.currentTarget.value);
               }}
               onKeyDown={(event) => {
+                event.stopPropagation();
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   submit();
                 }
+              }}
+              onKeyUp={(event) => {
+                event.stopPropagation();
               }}
             />
             <button type="button" disabled={state.running || draft.trim().length === 0} onClick={submit}>

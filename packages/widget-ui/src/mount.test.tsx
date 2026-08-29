@@ -79,4 +79,23 @@ describe("mounting the widget", () => {
     first.unmount();
     second.unmount();
   });
+
+  it("does not leak composer keystrokes to the page", () => {
+    document.documentElement.className = "dark";
+    const widget = mountWidget({ client: stubClient(), document, initiallyOpen: true });
+    const host = document.getElementById(SHADOW_HOST_ID);
+    expect(host?.getAttribute("contenteditable")).toBe("true");
+    expect(host?.dataset.sgTheme).toBe("dark");
+    let leaked = 0;
+    const onKey = (): void => {
+      leaked += 1;
+    };
+    document.addEventListener("keydown", onKey);
+    host?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "t", bubbles: true, cancelable: true, composed: true }),
+    );
+    document.removeEventListener("keydown", onKey);
+    expect(leaked).toBe(0);
+    widget.unmount();
+  });
 });

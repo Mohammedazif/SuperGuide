@@ -38,7 +38,7 @@ export function readConfiguration(document: Document): BootConfiguration | null 
   return {
     productId,
     apiUrl,
-    title: element.getAttribute("data-title") ?? "Get this done",
+    title: element.getAttribute("data-title") ?? "SuperGuide",
   };
 }
 
