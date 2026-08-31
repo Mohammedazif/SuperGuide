@@ -40,11 +40,13 @@ export const WIDGET_STYLES = `
 
 .launcher {
   position: fixed; inset-block-end: 16px; inset-inline-end: 16px;
-  width: 44px; height: 44px; border-radius: 22px; border: 0;
-  background: #2b3a67; color: #fff; font: 650 13px/44px system-ui, sans-serif;
+  width: 44px; height: 44px; border-radius: 22px; border: 0; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #2b3a67; color: #fff; font: 650 13px/1 system-ui, sans-serif;
   cursor: pointer; pointer-events: auto; z-index: 2147483647;
   box-shadow: var(--sg-shadow);
 }
+.launcher[aria-expanded="true"] { font-size: 22px; font-weight: 400; line-height: 1; }
 .launcher:focus-visible { outline: 3px solid #8aa4e8; outline-offset: 2px; }
 .launcher--running { box-shadow: 0 0 0 3px #3f9d63, var(--sg-shadow); }
 
