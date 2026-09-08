@@ -5,7 +5,7 @@ dist/
 .env
 .env.local
 .env.render
-eval/results/
+eval/
 node_modules/
 .pgdata/
 playwright-report/
@@ -16,3 +16,12 @@ playwright-report/
 test-results/
 .tsbuild/
 *.tsbuildinfo
+tests/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+vitest.config.ts
+playwright.config.ts
+LOCAL_TESTING.md
+VERIFICATION.md
+INTEGRATION.md

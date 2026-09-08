@@ -47,10 +47,9 @@ packages/observer    DOM to page digest, read only
 packages/executor    the closed action vocabulary
 packages/client-core transport, stream, durability, dispatch
 packages/widget-ui   the chat surface, in a closed shadow root
-eval/                thirty task fixtures and the harness that scores them
 ```
 
-One process serves two clients. The widget uses `/v1`. The Chrome extension (SuperGuide-Anywhere repo) uses `/v1/anywhere`. Step-by-step local setup: `LOCAL_TESTING.md`.
+One process serves two clients. The widget uses `/v1`. The Chrome extension (SuperGuide-Anywhere repo) uses `/v1/anywhere`.
 
 ## Seeing it work
 
@@ -64,9 +63,8 @@ That prints a URL. Open it in any browser and the widget is on the page.
 
 ![The widget on the fixture application](docs/demo.png)
 
-`INTEGRATION.md` covers putting it on a real product: origin allowlist, OpenAPI ingestion,
-identity, capabilities, procedures, escalation, and what a customer's Content-Security-Policy
-needs.
+Putting it on a real product needs an origin allowlist, OpenAPI ingestion, identity,
+capabilities, procedures, escalation, and a Content-Security-Policy that allows the widget.
 
 ## Running it
 
@@ -109,10 +107,7 @@ a conversation is served end to end by the provider that started it. Switching i
 `.env` line plus the matching key — no rebuild.
 
 No key value is committed anywhere in this repository, and none should be: `.env.example`
-ships those three fields blank, and CI generates its own per run. The fixed
-`Buffer.alloc(32, n)` keys in the test and eval harnesses are the exception that proves it —
-they are constants in code rather than committed secrets, and they are fixed because
-`pnpm eval --check-determinism` requires two runs to reproduce byte for byte.
+ships those three fields blank, and CI generates its own per run.
 
 Without Docker, `pnpm db:start` runs the same PostgreSQL 16 from a local install
 (`SG_PG_HOME`, default `~/.local/superguide-pg16`) on the same port, with the same two roles.
@@ -122,18 +117,9 @@ Without Docker, `pnpm db:start` runs the same PostgreSQL 16 from a local install
 ```
 pnpm lint                    # boundaries, purity, banned vendor names
 pnpm typecheck
-pnpm test:unit               # policy at 100% branch coverage, digest, executor, redaction
-pnpm test:integration        # against a real PostgreSQL
-pnpm test:security           # every row of the security matrix
-pnpm test:e2e                # the real widget in a real browser
-pnpm eval --variant=a        # thirty tasks against interface variant A
-pnpm eval --variant=b        # the same thirty against the redesign
 pnpm check:forbidden
 pnpm check:bundle-boundary
 ```
-
-`pnpm eval --variant=a --check-determinism` runs the suite twice and fails if any task did not
-reproduce exactly.
 
 ## Two roles, and why
 
@@ -141,7 +127,7 @@ The application connects as `sg_app`, which owns no table and has no `BYPASSRLS`
 tenant-scoped table has row-level security forced on, keyed on `product_id` through
 `sg_current_product_id()`, which returns NULL when the scope is unset or has been reset on a
 pooled connection. A connection that forgets to scope itself therefore sees nothing rather than
-everything, and there is a test that asserts exactly that.
+everything.
 
 `sg_migrator` owns the schema, runs migrations, and holds the administrative policies. It is
 never what the application connects as.

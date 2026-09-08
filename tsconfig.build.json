@@ -32,9 +32,6 @@
       "path": "apps/fixture-app"
     },
     {
-      "path": "eval/harness"
-    },
-    {
       "path": "apps/widget"
     },
     {

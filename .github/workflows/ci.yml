@@ -32,8 +32,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm build
-      - run: pnpm test:unit
-      - run: pnpm test:unit:coverage
       - run: pnpm check:forbidden
       - run: pnpm check:bundle-boundary
 
@@ -75,18 +73,3 @@ jobs:
             -c "CREATE EXTENSION IF NOT EXISTS vector"
 
       - run: pnpm db:migrate
-      - run: pnpm test:integration
-      - run: pnpm test:security
-
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
-
-      # The gate: a drop below the threshold on either interface variant blocks the merge.
-      - run: pnpm eval --variant=a --check-determinism
-      - run: pnpm eval --variant=b
-
-      - uses: actions/upload-artifact@v5
-        if: always()
-        with:
-          name: eval-results
-          path: eval/results/

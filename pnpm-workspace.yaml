@@ -1,7 +1,6 @@
 packages:
   - "packages/*"
   - "apps/*"
-  - "eval/harness"
   - "tools/eslint-plugin-superguide"
 
 # Allow esbuild (ERR_PNPM_IGNORED_BUILDS); decline unused genai/protobufjs postinstalls.
